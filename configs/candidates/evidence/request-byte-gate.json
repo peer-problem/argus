@@ -1,0 +1,68 @@
+{
+  "gate": "requestByteGate",
+  "status": "failed",
+  "measuredAt": "2026-08-22T02:35:09Z",
+  "surface": "Backend.AI GO v1.12.1 direct Squad chat",
+  "squadId": "b75a5a4b-ce9c-4f00-ab89-54adee1962c1",
+  "maximumAllowedBytes": 65536,
+  "scope": "The runner substitutes one Coding item at a time. This is an all-items coverage gate, not evidence that all 121 benchmark items are sent together.",
+  "largestDirectProbe": {
+    "itemId": "coding-visible-0017",
+    "sourceUrl": "https://submission.jxc.events.lablup.ai:8444/practice-sets/requests/coding-visible-0017/request.txt",
+    "sourceUtf8Bytes": 70310,
+    "sourceSha256": "a25faaef5a6be0df6d889d360886a7228156dae6b7d332d244bae14074e02870",
+    "editorAcceptedFullValue": true,
+    "sendEnabled": true,
+    "submittedUtf8Bytes": 71129,
+    "accepted": false,
+    "error": "invalid input: Request text is too long (71129 bytes). Maximum allowed is 65536 bytes."
+  },
+  "portalComposer": {
+    "ruleSource": "docs/phase-1/PRD.md#26-judge-request-composition",
+    "visibleRequestManifest": "practice/manifests/coding-visible.requests.json",
+    "visibleRequestManifestSha256": "e6aa28bc45786a7ca3d2a0b6dcd0f6671e89a92242014bf32aec271ad4c6be51",
+    "reproductionCommand": "npm run report:coverage",
+    "codingPromptPath": "prompts/coding.md",
+    "codingPromptUtf8Bytes": 552,
+    "codingPromptSha256": "e309b316d46ee73ce6d82657f6da0fcdfb22eb108c5e4e2479a3f93bfbdb7c1c",
+    "requiredOutputUtf8Bytes": 819,
+    "calculation": "normalize and trim prompt/item, replace {{TASK}}, append one blank line plus the Coding REQUIRED OUTPUT block and a final LF"
+  },
+  "visibleCodingCoverage": {
+    "reproducible": true,
+    "sourceAtOrBelowLimit": 12,
+    "sourceOverLimit": 8,
+    "composedAtOrBelowLimit": 11,
+    "composedOverLimit": 9,
+    "rows": [
+      { "itemId": "coding-visible-0001", "kind": "swebench", "sourceBytes": 65736, "composedBytes": 67100, "fits": false },
+      { "itemId": "coding-visible-0002", "kind": "swebench", "sourceBytes": 63481, "composedBytes": 64844, "fits": true },
+      { "itemId": "coding-visible-0003", "kind": "swebench", "sourceBytes": 65673, "composedBytes": 67035, "fits": false },
+      { "itemId": "coding-visible-0017", "kind": "swebench", "sourceBytes": 70310, "composedBytes": 71674, "fits": false },
+      { "itemId": "coding-visible-0018", "kind": "swebench", "sourceBytes": 68533, "composedBytes": 69895, "fits": false },
+      { "itemId": "coding-visible-0020", "kind": "swebench", "sourceBytes": 66558, "composedBytes": 67922, "fits": false },
+      { "itemId": "coding-visible-0021", "kind": "swebench", "sourceBytes": 63100, "composedBytes": 64459, "fits": true },
+      { "itemId": "coding-visible-0022", "kind": "swebench", "sourceBytes": 66777, "composedBytes": 68139, "fits": false },
+      { "itemId": "coding-visible-0023", "kind": "swebench", "sourceBytes": 62938, "composedBytes": 64302, "fits": true },
+      { "itemId": "coding-visible-0024", "kind": "swebench", "sourceBytes": 66261, "composedBytes": 67554, "fits": false },
+      { "itemId": "coding-visible-0026", "kind": "swebench", "sourceBytes": 67736, "composedBytes": 69090, "fits": false },
+      { "itemId": "coding-visible-0029", "kind": "swebench", "sourceBytes": 64922, "composedBytes": 66286, "fits": false },
+      { "itemId": "coding-visible-0031", "kind": "swebench", "sourceBytes": 64143, "composedBytes": 65507, "fits": true },
+      { "itemId": "coding-visible-0041", "kind": "livecodebench", "sourceBytes": 2274, "composedBytes": 3638, "fits": true },
+      { "itemId": "coding-visible-0042", "kind": "livecodebench", "sourceBytes": 1999, "composedBytes": 3363, "fits": true },
+      { "itemId": "coding-visible-0043", "kind": "livecodebench", "sourceBytes": 2002, "composedBytes": 3366, "fits": true },
+      { "itemId": "coding-visible-0044", "kind": "livecodebench", "sourceBytes": 2354, "composedBytes": 3718, "fits": true },
+      { "itemId": "coding-visible-0053", "kind": "livecodebench", "sourceBytes": 2403, "composedBytes": 3765, "fits": true },
+      { "itemId": "coding-visible-0054", "kind": "livecodebench", "sourceBytes": 2417, "composedBytes": 3775, "fits": true },
+      { "itemId": "coding-visible-0055", "kind": "livecodebench", "sourceBytes": 3066, "composedBytes": 4426, "fits": true }
+    ]
+  },
+  "optimization": {
+    "previousPromptUtf8Bytes": 1025,
+    "currentPromptUtf8Bytes": 552,
+    "newlyFittingItem": "coding-visible-0031",
+    "newlyFittingItemMarginBytes": 29,
+    "minimumUnavoidableOverheadIncludesRequiredOutput": true
+  },
+  "decision": "The direct all-items Coding gate still fails, so the full Coding route is not freeze-ready. Continue Math, Generic, and the 11 fitting Coding items. Use a portal outcome to determine whether its hosted runner has the same request guard before deciding the nine oversized items are impossible."
+}

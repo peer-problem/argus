@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-22T03:07:28Z",
+  "runtime": {
+    "product": "Backend.AI GO",
+    "version": "1.12.1",
+    "desktopBinary": {
+      "path": "/Applications/Backend.AI GO.app/Contents/MacOS/backend-ai-go",
+      "bytes": 81533152,
+      "sha256": "8bf7e9f7ca6ce7f4bd4d5ebea88fa98c6a418c93cd8244744593913133b29fb3",
+      "containsRequestLengthGuard": true
+    },
+    "serverBinary": {
+      "path": "/Applications/Backend.AI GO.app/Contents/MacOS/aigo-server",
+      "bytes": 73963920,
+      "sha256": "253edd73b0af69e55cf485cea7f7af4853f2c88ed21973326c7deee74fccff41",
+      "containsRequestLengthGuard": true
+    }
+  },
+  "observations": {
+    "desktopExecutionError": "Request text is too long (71129 bytes). Maximum allowed is 65536 bytes.",
+    "cliExecuteInput": "The packaged CLI accepts the request as one positional text argument and exposes no file, chunking, or request-limit override option.",
+    "supportedBypassIdentified": false,
+    "portalFreeCheck": "Passed with 'No problems found'; no submission was queued.",
+    "settingsOverridesPropagation": "The portal emitted one non-rejecting warning per agent: settingsOverrides for max tokens, iteration bounds, and tool-call bounds do not reach evaluation; event per-run caps apply instead.",
+    "contextReservationInterpretation": "The 12,288-token output reservation is a conservative local preflight assumption, not a runtime-enforced evaluation setting.",
+    "aggregation": "Three completed tiny Math histories store the Solver task output separately while the local history finalResult contains only an execution summary.",
+    "aggregationInterpretation": "The portal's published request pages resolve the ambiguity: the judge tries aggregated result first, then last-wave task outputs backwards, and refuses the deterministic execution summary as an answer. The Execution Progress result field and judge field are the same."
+  },
+  "scope": "Read-only inspection of installed application metadata, executable strings, CLI help, and existing execution history, plus the user-approved free portal validator. No application binary or runtime setting was modified, and no evaluation was queued."
+}

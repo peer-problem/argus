@@ -1,0 +1,94 @@
+{
+  "gate": "plannerProtocolGate",
+  "status": "passed",
+  "measuredAt": "2026-08-22T03:07:28Z",
+  "squadId": "b75a5a4b-ce9c-4f00-ab89-54adee1962c1",
+  "contestContract": {
+    "source": ".agents/instructions/INSTRUCTIONS.md",
+    "sourceSha256": "d291caf9d8847d1588ddf041f473dcb157990082877df76d5d522401b2103b51",
+    "runnerSubstitutesTask": true,
+    "instruction": "Make your final agents' answer concise: codes, numbers or answers only, without redundant explanations"
+  },
+  "officialRuntimeDocumentation": {
+    "executionUrl": "https://go.backend.ai/en/manual/squad/execution/",
+    "overviewUrl": "https://go.backend.ai/en/manual/squad/overview/",
+    "documentedBehavior": [
+      "Aggregating collects and synthesizes results from all tasks.",
+      "Completed means all tasks finished and a final result is available.",
+      "After all tasks complete, results are collected and synthesized into a final deliverable."
+    ],
+    "judgeExtractionFieldDocumented": true
+  },
+  "portalPublishedExtractionContract": {
+    "capturedAt": "2026-08-22T03:07:28Z",
+    "trackPages": [
+      {
+        "track": "coding",
+        "url": "https://submission.jxc.events.lablup.ai:8444/practice-sets/requests/coding-visible-0041",
+        "htmlSha256": "fb8762579cf2ca3fb1624bd438d17f809bebf793ff303e9d7113d48e19be7fab"
+      },
+      {
+        "track": "math",
+        "url": "https://submission.jxc.events.lablup.ai:8444/practice-sets/requests/math-visible-0001",
+        "htmlSha256": "05072d1b740869fdd3db4960acbed749f2a9b4087655414bf52ba3cbd27f193e"
+      },
+      {
+        "track": "generic",
+        "url": "https://submission.jxc.events.lablup.ai:8444/practice-sets/requests/generic-visible-mmlu-pro-10088",
+        "htmlSha256": "600687d154327b3679ca700fa946abf94fd8b6c23e6e1d25d670e63bece9f52d"
+      }
+    ],
+    "documentedFacts": [
+      "The desktop rehearsal uses the same executor as a scored run.",
+      "The Squad text shown beneath each task line in Execution Progress is the result field.",
+      "Execution Progress and the judge read the same field.",
+      "Extraction checks aggregated result first, then task outputs from the last wave backwards.",
+      "The deterministic execution status summary is refused as an answer."
+    ],
+    "trackConsistent": true
+  },
+  "probes": [
+    {
+      "plannerModel": "furiosa-ai/Qwen3-32B-FP8",
+      "executionId": "367502d1-55df-4930-8278-2e6ebdae2be1",
+      "taskCount": 1,
+      "assignedAgent": "ARGUS Solver",
+      "nativePlanPassed": true,
+      "fallbackDetected": false,
+      "durationMs": 33304,
+      "tokens": { "prompt": 383, "completion": 200 },
+      "taskOutput": "\\boxed{4}",
+      "taskOutputContractValid": false,
+      "historyFinalResultContainsTaskOutput": false
+    },
+    {
+      "plannerModel": "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16",
+      "executionId": "7b2b6f17-22d2-4385-b93c-ca5d17e74581",
+      "taskCount": 1,
+      "assignedAgent": "ARGUS Solver",
+      "nativePlanPassed": true,
+      "fallbackDetected": false,
+      "durationMs": 111727,
+      "tokens": { "prompt": 563, "completion": 263 },
+      "taskOutputFinalLine": "FINAL ANSWER: \\boxed{4}",
+      "taskOutputContractValid": true,
+      "historyFinalResultContainsTaskOutput": false
+    }
+  ],
+  "historyObservation": {
+    "value": "Execution complete — 1 task(s) processed in 1 wave(s).",
+    "meaning": "The local history top-level finalResult is a static execution summary.",
+    "doesNotProve": [
+      "that the portal grades this history field",
+      "that the Solver task output is discarded by the portal",
+      "that the Solver task output is accepted by the portal extractor"
+    ]
+  },
+  "resolvedInterpretation": "Both eligible Planner models created exactly one Solver task. The portal's own published request pages state that the judge reads the Execution Progress result field, tries aggregated result first, falls back through last-wave task outputs, and rejects the deterministic status summary. Therefore a Solver task output is a native judged-answer source even when local history finalResult is only the status summary.",
+  "remainingPortalProof": {
+    "format": "Coding and Generic still require actual contract-valid runtime outputs; current Math evidence is from an earlier probe.",
+    "caps": "A queued evaluation is still required for event cap, cache, outcome, and score telemetry.",
+    "correctness": "Extraction routing does not prove that an answer is correct."
+  },
+  "decision": "Pass the native Planner/task/answer-routing gate. Keep Format, Cap, SWE fidelity, and accuracy gates independent."
+}
