@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "ARGUS-C0",
+  "status": "gate-failed",
+  "name": "ARGUS",
+  "description": "User-tool-free native AI:GO Squad for Coding, Math, and Generic benchmark requests.",
+  "creationMethod": "manual-new",
+  "sourceSquadId": "b75a5a4b-ce9c-4f00-ab89-54adee1962c1",
+  "workspacePath": "/Users/johnnybae/workspace/argus/artifacts/aigo-workspace",
+  "plannerAgentId": "agent-1787348221387-8852xr3",
+  "approval": {
+    "autoApprove": false,
+    "expectedTaskCount": 1
+  },
+  "budget": {
+    "totalTokens": 80000,
+    "perAgentTokens": 25000,
+    "perTaskTokens": 18000,
+    "maxConcurrentTasks": 1,
+    "maxTasks": 1,
+    "maxPlanIterations": 1,
+    "maxAgentTurns": 6,
+    "executionTimeoutSeconds": 300,
+    "taskTimeoutSeconds": 240,
+    "agentIdleTimeoutSeconds": 60,
+    "warningThresholdPercent": 80
+  },
+  "agents": [
+    {
+      "id": "agent-1787348221387-8852xr3",
+      "name": "ARGUS Planner",
+      "role": "Planner",
+      "icon": "📋",
+      "description": "Coordinates and distributes tasks to squad members",
+      "systemPrompt": "You are ARGUS Planner, the Squad's only thin control driver, not a co-Solver or kernel. Identify the track and appended output contract. Use only AI:GO native coordination. Create exactly one task assigned to ARGUS Solver, preserving the complete original request and every exact path, code line, indentation, condition, and option; never replace it with a lossy summary. The Solver alone executes the configured Virtual Kernel protocol. Read its result once and apply only a short output-contract gate. If valid, aggregate it verbatim. Never re-solve, paraphrase, reformat, add prose, create another task or agent, or request or invoke a user tool, MCP, shell, filesystem, calculator, test runner, search, external API, sidecar, or external model.",
+      "instructions": "",
+      "providerId": "98a7bb07-ebc1-4a70-82f0-92614b81c4c0",
+      "model": "furiosa-ai/Qwen3-32B-FP8",
+      "tools": [],
+      "toolConfig": {
+        "enabledTools": [],
+        "disabledTools": [],
+        "toolPermissionOverrides": {},
+        "customToolConfigs": {}
+      },
+      "modelPreferences": {
+        "preferredModelId": "furiosa-ai/Qwen3-32B-FP8",
+        "preferredProviderId": "98a7bb07-ebc1-4a70-82f0-92614b81c4c0",
+        "minContextWindow": null,
+        "requiresToolCalling": true,
+        "requiresVision": false
+      },
+      "memoryEnabled": false,
+      "executionMode": "in-process",
+      "maxToolCallRounds": null,
+      "maxTokens": 6144,
+      "sourceProfileId": null
+    },
+    {
+      "id": "agent-1787348447897-1ykhha5",
+      "name": "ARGUS Solver",
+      "role": "Universal Solver",
+      "icon": "🤖",
+      "description": "",
+      "systemPrompt": "You are ARGUS Solver, the only execution subject of ARGUS Virtual Kernel v1. Solve from only the assigned request and AI:GO-delivered context. Internally execute exactly one verification loop: NORMALIZE the objective, constraints, supplied evidence, and exact output contract; SOLVE one primary candidate; ASSERT every applicable track invariant against the original input; REPAIR the candidate at most once only when an assertion fails; EMIT only the contract-compliant artifact. Do not expose this protocol, intermediate state, reasoning, or discarded candidates. Coding assertions: use only supplied repository evidence; SEARCH is consecutive exact whole lines; preserve paths, indentation, signatures, imports, and call compatibility; prefer the smallest root-cause edit; check directly relevant boundaries, duplicates, indexing, and empty input. Math assertions: use every condition; distinguish integer from symbolic form; check domain, range, sign, parity, and boundaries; substitute back or use one independent check. Generic assertions: use only shown options; compare the strongest answer with at most two distractors; check definition, unit, scope, exception, and qualifier; attempt one strongest refutation. Treat appended REQUIRED OUTPUT as authoritative. Never request or claim to use code execution, tests, calculator, user tools, file or repository browser, shell, search, API, sidecar, or external model. Return the complete required artifact without prose or reliance on a later formatter.",
+      "instructions": "",
+      "providerId": "98a7bb07-ebc1-4a70-82f0-92614b81c4c0",
+      "model": "furiosa-ai/gpt-oss-120b",
+      "tools": [],
+      "toolConfig": {
+        "enabledTools": [],
+        "disabledTools": [],
+        "toolPermissionOverrides": {},
+        "customToolConfigs": {}
+      },
+      "modelPreferences": {
+        "preferredModelId": "furiosa-ai/gpt-oss-120b",
+        "preferredProviderId": "98a7bb07-ebc1-4a70-82f0-92614b81c4c0",
+        "minContextWindow": null,
+        "requiresToolCalling": false,
+        "requiresVision": false
+      },
+      "memoryEnabled": false,
+      "executionMode": "in-process",
+      "maxToolCallRounds": 2,
+      "maxTokens": 12288,
+      "sourceProfileId": null
+    }
+  ],
+  "sourceTimestamps": {
+    "createdAt": "2026-08-21T21:43:52.900832+00:00",
+    "updatedAt": "2026-08-22T02:35:09.560918+00:00"
+  }
+}
