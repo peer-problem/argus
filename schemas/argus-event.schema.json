@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://argus.local/schemas/argus-event.schema.json",
+  "title": "ARGUS normalized event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "runId",
+    "track",
+    "kind",
+    "state",
+    "decision",
+    "tokens",
+    "durationMs",
+    "timestamp"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1 },
+    "runId": { "type": "string", "minLength": 1 },
+    "parentEventId": { "type": ["string", "null"] },
+    "track": { "enum": ["coding", "math", "generic", "unknown"] },
+    "wave": { "type": ["integer", "null"], "minimum": 0 },
+    "taskId": { "type": ["string", "null"] },
+    "taskTitle": { "type": ["string", "null"] },
+    "dependsOnTaskIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "agentId": { "type": ["string", "null"] },
+    "agentRole": { "type": ["string", "null"] },
+    "model": { "type": ["string", "null"] },
+    "kind": {
+      "enum": [
+        "run.created",
+        "run.started",
+        "plan.created",
+        "task.created",
+        "task.assigned",
+        "task.started",
+        "task.completed",
+        "task.failed",
+        "aggregation.started",
+        "aggregation.completed",
+        "run.capped",
+        "run.failed",
+        "run.completed",
+        "evidence.attached",
+        "unknown"
+      ]
+    },
+    "state": {
+      "enum": ["queued", "planning", "running", "completed", "failed", "capped", "unknown"]
+    },
+    "decision": { "type": "string" },
+    "artifactRef": { "type": ["string", "null"] },
+    "candidateStatus": { "enum": ["selected", "rejected", "observed", "none"] },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output", "reasoning", "cachedInput", "normalizedCost"],
+      "properties": {
+        "input": { "type": "number", "minimum": 0 },
+        "output": { "type": "number", "minimum": 0 },
+        "reasoning": { "type": "number", "minimum": 0 },
+        "cachedInput": { "type": "number", "minimum": 0 },
+        "normalizedCost": { "type": "number", "minimum": 0 }
+      }
+    },
+    "durationMs": { "type": "number", "minimum": 0 },
+    "squadConfigHash": { "type": ["string", "null"], "pattern": "^(sha256:)?[a-f0-9]{64}$" },
+    "submissionJsonHash": { "type": ["string", "null"], "pattern": "^(sha256:)?[a-f0-9]{64}$" },
+    "promptHash": { "type": ["string", "null"], "pattern": "^(sha256:)?[a-f0-9]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "raw": { "type": ["object", "null"], "additionalProperties": true }
+  }
+}
