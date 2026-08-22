@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "status": "plan-only",
+  "capturedAt": "2026-08-22T03:07:28Z",
+  "sourceUrl": "https://submission.jxc.events.lablup.ai:8444/practice-sets/requests",
+  "sourceHtmlSha256": "8799b6b9571f7e7591fcd14cc1b985ecd2649aad27a36c9c59c675efbffbb6d5",
+  "archiveSha256": "d676fc90bc7704708fd9cf600e75b40f327a9f7763502797de159972c0b28062",
+  "models": {
+    "solverMatrix": [
+      "furiosa-ai/Qwen3-32B-FP8",
+      "furiosa-ai/gpt-oss-120b",
+      "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16"
+    ],
+    "plannerEligible": [
+      "furiosa-ai/Qwen3-32B-FP8",
+      "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16"
+    ],
+    "plannerExcluded": ["furiosa-ai/gpt-oss-120b"]
+  },
+  "subsets": {
+    "swebench": {
+      "requiredMinimum": 5,
+      "selected": [
+        "coding-visible-0002",
+        "coding-visible-0021",
+        "coding-visible-0023",
+        "coding-visible-0031",
+        "coding-visible-0001"
+      ],
+      "directEligible": [
+        "coding-visible-0002",
+        "coding-visible-0021",
+        "coding-visible-0023",
+        "coding-visible-0031"
+      ],
+      "transportBlocked": ["coding-visible-0001"],
+      "repositoryOverlapCheck": "pending",
+      "ready": false,
+      "reason": "Only four visible SWE items fit the installed direct transport after composition; the fifth requires a supported hosted or organizer path."
+    },
+    "livecodebench": {
+      "requiredMinimum": 5,
+      "selected": [
+        "coding-visible-0041",
+        "coding-visible-0042",
+        "coding-visible-0043",
+        "coding-visible-0053",
+        "coding-visible-0055"
+      ],
+      "ready": true
+    },
+    "math": {
+      "requiredMinimum": 18,
+      "repeats": 2,
+      "math500": [
+        "math-visible-0001",
+        "math-visible-0004",
+        "math-visible-0007",
+        "math-visible-0010",
+        "math-visible-0014",
+        "math-visible-0018",
+        "math-visible-0022",
+        "math-visible-0026",
+        "math-visible-0031",
+        "math-visible-0034",
+        "math-visible-0041",
+        "math-visible-0052"
+      ],
+      "aime2024": [
+        "math-visible-0135",
+        "math-visible-0137",
+        "math-visible-0139",
+        "math-visible-0141",
+        "math-visible-0143",
+        "math-visible-0145"
+      ],
+      "answerFormClassification": "pending-manual-lock",
+      "ready": false
+    },
+    "generic": {
+      "requiredSubjects": 14,
+      "selected": [
+        { "subject": "physics", "itemId": "generic-visible-mmlu-pro-10088" },
+        { "subject": "computer_science", "itemId": "generic-visible-mmlu-pro-10390" },
+        { "subject": "philosophy", "itemId": "generic-visible-mmlu-pro-10861" },
+        { "subject": "law", "itemId": "generic-visible-mmlu-pro-1115" },
+        { "subject": "engineering", "itemId": "generic-visible-mmlu-pro-11440" },
+        { "subject": "business", "itemId": "generic-visible-mmlu-pro-120" },
+        { "subject": "psychology", "itemId": "generic-visible-mmlu-pro-2021" },
+        { "subject": "biology", "itemId": "generic-visible-mmlu-pro-2945" },
+        { "subject": "chemistry", "itemId": "generic-visible-mmlu-pro-3637" },
+        { "subject": "history", "itemId": "generic-visible-mmlu-pro-4691" },
+        { "subject": "other", "itemId": "generic-visible-mmlu-pro-5071" },
+        { "subject": "health", "itemId": "generic-visible-mmlu-pro-6009" },
+        { "subject": "economics", "itemId": "generic-visible-mmlu-pro-6912" },
+        { "subject": "math", "itemId": "generic-visible-mmlu-pro-7788" }
+      ],
+      "ready": true
+    }
+  },
+  "execution": {
+    "liveRuns": 0,
+    "readyForExecution": false,
+    "requiresApproval": true,
+    "requiredMeasurements": [
+      "deterministic grader accuracy",
+      "format failure rate",
+      "input/output/reasoning/cached token counts",
+      "normalized cost",
+      "wall-clock and timeout",
+      "answer variance",
+      "context duplication factor"
+    ],
+    "reason": "The item/model matrix is locked, but no model- or portal-costing calibration run is authorized and two subset readiness checks remain open."
+  }
+}
