@@ -30,6 +30,34 @@ function lastMatch(regex: RegExp, value: string): RegExpExecArray | null {
   return result;
 }
 
+function boxedAnswer(line: string): string | null {
+  const prefix = "FINAL ANSWER: \\boxed{";
+  if (!line.startsWith(prefix)) return null;
+  const body = line.slice(prefix.length);
+  let depth = 1;
+  let escaped = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+    } else if (character === "{") {
+      depth += 1;
+    } else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        if (index !== body.length - 1) return null;
+        const answer = body.slice(0, index).trim();
+        return answer || null;
+      }
+    }
+  }
+  return null;
+}
+
 function lintCoding(output: string, request?: string): ValidationResult<LintedOutput> {
   const issues: ValidationIssue[] = [];
   const normalized = normalizeNewlines(output).trim();
@@ -43,10 +71,10 @@ function lintCoding(output: string, request?: string): ValidationResult<LintedOu
     issues.push({ code: "FORMAT_PATCH_PROSE", message: "Coding output contains content outside the final patch markers.", severity: "error" });
   }
   const body = patch.slice("*** PATCH START ***".length, -"*** PATCH END ***".length).trim();
-  const editRegex = /(?:^|\n)([^\n]+)\n<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE(?=\n|$)/g;
+  const editRegex = /(?:^|\n)([^\n]+)\n<<<<<<< SEARCH\n(?:([\s\S]*?)\n)?=======\n([\s\S]*?)\n>>>>>>> REPLACE(?=\n|$)/g;
   const edits: PatchEdit[] = [];
   for (const match of body.matchAll(editRegex)) {
-    edits.push({ path: match[1]!.trim(), search: match[2]!, replace: match[3]! });
+    edits.push({ path: match[1]!.trim(), search: match[2] ?? "", replace: match[3]! });
   }
   if (edits.length === 0) {
     issues.push({ code: "FORMAT_PATCH_BLOCK", message: "No valid SEARCH/REPLACE edit block found.", severity: "error" });
@@ -74,17 +102,21 @@ function lintCoding(output: string, request?: string): ValidationResult<LintedOu
 
 function lintMath(output: string): ValidationResult<LintedOutput> {
   const normalized = normalizeNewlines(output).trim();
-  const match = lastMatch(/^FINAL ANSWER: \\boxed\{([^\n{}]+)\}$/gm, normalized);
+  const matches = normalized
+    .split("\n")
+    .map((line) => ({ line, answer: boxedAnswer(line) }))
+    .filter((candidate): candidate is { line: string; answer: string } => candidate.answer !== null);
+  const match = matches.at(-1);
   const issues: ValidationIssue[] = [];
   if (!match) {
     issues.push({ code: "FORMAT_FINAL_ANSWER", message: "Missing an exact FINAL ANSWER boxed line.", severity: "error" });
     return { ok: false, issues };
   }
-  const extracted = match[0];
+  const extracted = match.line;
   if (normalized.split("\n").at(-1) !== extracted) {
     issues.push({ code: "FORMAT_FINAL_ANSWER_SUFFIX", message: "The boxed answer must be the final non-empty line.", severity: "error" });
   }
-  const answer = match[1]!.trim();
+  const answer = match.answer;
   if (!answer) issues.push({ code: "FORMAT_FINAL_ANSWER_EMPTY", message: "The answer box is empty.", severity: "error" });
   return { ok: !issues.some((issue) => issue.severity === "error"), value: { track: "math", extracted, answer }, issues };
 }
