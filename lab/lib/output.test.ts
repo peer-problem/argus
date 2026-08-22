@@ -22,11 +22,23 @@ describe("output lint", () => {
     expect(lintOutput("coding", output, request).ok).toBe(true);
   });
 
+  it("accepts an empty SEARCH whose markers are on adjacent lines", () => {
+    const request = "The repository is an empty repository. Create solution.py.";
+    const output = "*** PATCH START ***\nsolution.py\n<<<<<<< SEARCH\n=======\nprint(input())\n>>>>>>> REPLACE\n*** PATCH END ***";
+    expect(lintOutput("coding", output, request).ok).toBe(true);
+  });
+
   it("uses the last exact math line", () => {
     const good = "short check\nFINAL ANSWER: \\boxed{17}";
     const bad = "FINAL ANSWER: \\boxed{17}\nextra";
     expect(lintOutput("math", good).ok).toBe(true);
     expect(lintOutput("math", bad).ok).toBe(false);
+  });
+
+  it("accepts nested LaTeX braces inside the math answer", () => {
+    const result = lintOutput("math", "FINAL ANSWER: \\boxed{\\frac{11}{2}}");
+    expect(result.ok).toBe(true);
+    expect(result.value?.answer).toBe("\\frac{11}{2}");
   });
 
   it("checks the provided generic option set instead of assuming ten choices", () => {
