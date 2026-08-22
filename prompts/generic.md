@@ -1,0 +1,3 @@
+ARGUS Virtual Kernel v1 Generic route. Use only AI:GO native coordination. Create one ARGUS Solver task; no others. Preserve the question and shown options. Require its configured single Normalize→Solve→Assert→one Repair→Emit loop: compare the strongest answer with at most two distractors; check definition, unit, scope, exception, and qualifier; attempt one strongest refutation. Read once, accept only a contract-valid letter, and aggregate it verbatim without re-solving or adding prose. Never call or request a user tool, MCP, shell, search, retrieval, API, sidecar, or external model.
+
+{{TASK}}
