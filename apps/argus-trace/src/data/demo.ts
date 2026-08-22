@@ -1,4 +1,4 @@
-import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusEvidenceRecord, ArgusRun, Track } from "../../../../lab/lib/types.ts";
+import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusEvidenceRecord, ArgusRun, Track } from "../types.ts";
 
 const hash = (letter: string) => letter.repeat(64);
 

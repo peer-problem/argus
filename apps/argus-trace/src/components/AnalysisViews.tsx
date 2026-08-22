@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, CircleAlert, Gauge, ShieldCheck, X } from "lucide-react";
-import type { ArgusBatchItem, ArgusRun } from "../../../../lab/lib/types.ts";
+import type { ArgusBatchItem, ArgusRun } from "../types.ts";
 import { capShare, complianceScore, formatDuration, formatNumber } from "../derive.ts";
 import { dataArrivalsFor } from "../data/demo.ts";
 import { UiProgress } from "./ui/Controls.tsx";
@@ -42,8 +42,8 @@ export function DataArrivalFlow({ item, loadedAt }: { item: ArgusBatchItem; load
             <strong>{arrival.protocol}</strong>
             <small>{arrival.source} <span aria-hidden="true">→</span> {arrival.receiver}</small>
             <time dateTime={arrival.recordedAt}>{formatRecordedAt(arrival.recordedAt, arrival.startedAt)}</time>
-            <p>{arrival.data}</p>
             {arrival.reference && <code>{arrival.reference}</code>}
+            <details className="arrival-details"><summary>Record fields</summary><p>{arrival.data}</p></details>
           </div>
         </li>
       ))}</ol>
@@ -51,7 +51,7 @@ export function DataArrivalFlow({ item, loadedAt }: { item: ArgusBatchItem; load
   );
 }
 
-const complianceLabels: Record<keyof ArgusRun["compliance"], [string, string]> = {
+const complianceLabels: Record<string, [string, string]> = {
   userToolsZero: ["User tools", "No built-in, custom, or MCP tools attached"],
   plannerNativeProtocol: ["Native protocol", "Planner coordination remained inside AI:GO"],
   memoryOff: ["Memory", "No previous conversation context injected"],
@@ -95,7 +95,7 @@ export function RunSignals({ run }: { run: ArgusRun }) {
         <div className="signal-number"><strong>{compliance.passed}/{compliance.total}</strong><span>{compliance.known} checks observed</span></div>
         <div className="signal-checks">
           {(Object.entries(run.compliance) as Array<[keyof ArgusRun["compliance"], boolean | null]>).map(([key, value]) => {
-            const [label] = complianceLabels[key];
+            const label = complianceLabels[key]?.[0] ?? String(key).replace(/([a-z])([A-Z])/g, "$1 $2");
             return <div key={key} className={value === true ? "pass" : value === false ? "fail" : "unknown"}><span>{value === true ? <Check size={13} /> : value === false ? <X size={13} /> : <CircleAlert size={13} />}</span><strong>{label}</strong><small>{value === true ? "Pass" : value === false ? "Fail" : "Unknown"}</small></div>;
           })}
         </div>

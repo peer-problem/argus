@@ -1,4 +1,4 @@
-import type { PortalBatchRunReport } from "../../../../lab/lib/types.ts";
+import type { PortalBatchRunReport } from "../types.ts";
 
 function report(value: Omit<PortalBatchRunReport, "source" | "evidence"> & { receivedAt: string }): PortalBatchRunReport {
   const { receivedAt, ...fields } = value;

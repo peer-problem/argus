@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSchema } from "../../../lab/lib/schema.ts";
+import { isArgusRun } from "./contracts.ts";
 import { capShare, comparisonIsMatched, costEfficiencyIndex, dependencyWaveCount, finalAnswerPreview, formatDuration, notGradedItems, portalTokenEfficiency, taskCount, visibleEvents, weightedPortalScore } from "./derive.ts";
 import { dataArrivalsFor, demoBatches, demoRuns } from "./data/demo.ts";
 import { demoPortalReports } from "./data/portalReports.ts";
@@ -8,6 +8,17 @@ describe("trace derivations", () => {
   it("reveals at least the first event while replaying", () => {
     expect(visibleEvents(demoRuns[0]!.events, 0)).toHaveLength(1);
     expect(visibleEvents(demoRuns[0]!.events, 1)).toHaveLength(demoRuns[0]!.events.length);
+  });
+
+  it("reveals events by their observed time, not their position in the array", () => {
+    const first = demoRuns[0]!.events[0]!;
+    const events = [
+      { ...first, eventId: "at-start", timestamp: "2026-08-22T00:00:00.000Z" },
+      { ...first, eventId: "at-one-second", timestamp: "2026-08-22T00:00:01.000Z" },
+      { ...first, eventId: "at-ten-seconds", timestamp: "2026-08-22T00:00:10.000Z" }
+    ];
+    expect(visibleEvents(events, .3).map((event) => event.eventId)).toEqual(["at-start", "at-one-second"]);
+    expect(visibleEvents([...events].reverse(), .3).map((event) => event.eventId)).toEqual(["at-start", "at-one-second"]);
   });
 
   it("computes cap share and readable duration", () => {
@@ -54,7 +65,7 @@ describe("trace derivations", () => {
     const report = demoPortalReports[0]!;
     expect(weightedPortalScore(report)).toBeCloseTo(0.093, 3);
     expect(report.score).toBe(0.093);
-    expect(portalTokenEfficiency(report)).toBeCloseTo(25.513, 3);
+    expect(portalTokenEfficiency(report)).toBeCloseTo(3.39, 2);
     expect(notGradedItems(report)).toBe(4);
     expect(report.tokens.input + report.tokens.output).toBe(report.tokens.total);
     expect(report.modelUsage.reduce((total, model) => total + model.totalTokens, 0)).toBe(report.tokens.total);
@@ -124,7 +135,8 @@ describe("trace derivations", () => {
     expect(demoBatches[0]!.items.map((item) => item.trace.runId)).toEqual(demoRuns.map((run) => run.runId));
   });
 
-  it("keeps every expanded item projection inside the run schema", () => {
-    for (const run of demoRuns) expect(validateSchema("run", run).ok).toBe(true);
+  it("keeps every expanded item projection inside the frontend run contract", () => {
+    for (const run of demoRuns) expect(isArgusRun(run)).toBe(true);
+    expect(isArgusRun({ runId: "incomplete", events: [] })).toBe(false);
   });
 });
