@@ -1,0 +1,38 @@
+{
+  "gate": "sweFidelityGate",
+  "status": "unverified",
+  "measuredAt": "2026-08-22T03:14:24Z",
+  "maximumSizeItem": {
+    "itemId": "coding-visible-0017",
+    "directRuntimeAccepted": false
+  },
+  "eligibleVisibleSweItems": [
+    "coding-visible-0002",
+    "coding-visible-0021",
+    "coding-visible-0023",
+    "coding-visible-0031"
+  ],
+  "latestAttempt": {
+    "itemId": "coding-visible-0041",
+    "kind": "livecodebench",
+    "plannerReached": true,
+    "nativePlannerCompleted": false,
+    "cause": "HTTP 503 from the hosted Qwen Planner",
+    "fallbackExecuted": false
+  },
+  "localDeterministicHarness": {
+    "status": "passed",
+    "validatedAt": "2026-08-22T03:14:24Z",
+    "testSuite": "lab/lib/fidelity.test.ts",
+    "cli": "argus lint-swe-fidelity <original-request> <planner-task> <solver-input>",
+    "checks": [
+      "The complete canonical original request is embedded in the Planner task.",
+      "The complete canonical original request is embedded in the Solver input.",
+      "Every published repository excerpt path survives both surfaces.",
+      "Exact-line coverage and UTF-8 byte/SHA-256 identities are reported.",
+      "Changed code lines and explicit truncation markers fail."
+    ]
+  },
+  "reason": "Maximum-item fidelity remains impossible on the direct v1.12.1 input surface, but four composed SWE items fit and can be tested independently. The latest small Coding retry was interrupted by upstream availability, not request fidelity.",
+  "decision": "The deterministic fidelity verifier is ready. Continue item-level live capture when model usage is approved; do not pass this gate or promote full Coding coverage until an eligible SWE run supplies all three surfaces."
+}

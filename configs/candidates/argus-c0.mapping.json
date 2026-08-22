@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "candidateId": "ARGUS-C0",
+  "capturedAt": "2026-08-22T02:56:26Z",
+  "portalVerified": true,
+  "liveSquad": {
+    "id": "b75a5a4b-ce9c-4f00-ab89-54adee1962c1",
+    "configSha256": "bb34ae4309f4987999d3cc807a1477d529af6c7878cef872550b59f625486651",
+    "budgetSha256": "330d642082156007e560a7e015906152c1e311ef111650d0a92c393943637f4e"
+  },
+  "trackedArtifacts": {
+    "candidateLadder": {
+      "path": "configs/candidates/argus-candidate-ladder.json",
+      "sha256": "0177402ec327e041cdc3a2245e7c8d2970f29d71306ab075fbc9baebff9225e3"
+    },
+    "liveSnapshot": {
+      "path": "configs/candidates/argus-c0.aigo.json",
+      "sha256": "aaf75d1b0943159f58246244faf1805082862205d810bf25b5e564e410662d0e"
+    },
+    "workspaceSquad": {
+      "path": "artifacts/aigo-workspace/.squad.json",
+      "sha256": "b78b79eb7b3cf8680aa554eb4cee53523f5b06040008f54e4e1dfca1b86a1896"
+    },
+    "deliveryMapping": {
+      "path": "configs/candidates/argus-c0.delivery.json",
+      "sha256": "9a23bc6f40cf57b0bc988f73afad846429ce6663e6300931049478d127b04d4f"
+    },
+    "runtimeConstraints": {
+      "path": "configs/candidates/evidence/runtime-constraints.json",
+      "sha256": "6ee120ebb5ba00474fcf8f9bdee9bcee50e4b2ed9e6ac1ad5fd7da5b09260886"
+    },
+    "normalizedAigoProbes": {
+      "path": "configs/candidates/evidence/aigo-math-probes.normalized.json",
+      "sha256": "da53c4ea5b99880a283f287d6a43aebd706d43d76b04aa99b2c5e9b2688ff20f"
+    },
+    "codingVisibleRequests": {
+      "path": "practice/manifests/coding-visible.requests.json",
+      "sha256": "e6aa28bc45786a7ca3d2a0b6dcd0f6671e89a92242014bf32aec271ad4c6be51"
+    },
+    "calibrationPlan": {
+      "path": "practice/manifests/calibration-plan.json",
+      "sha256": "68db987e848a4f40fa4ac7a58addc73708ff7250512db61b7deba3b0777086ac"
+    }
+  },
+  "prompts": {
+    "coding": {
+      "path": "prompts/coding.md",
+      "sha256": "e309b316d46ee73ce6d82657f6da0fcdfb22eb108c5e4e2479a3f93bfbdb7c1c"
+    },
+    "math": {
+      "path": "prompts/math.md",
+      "sha256": "403e2bcb5a67f5dfcc6862e326d4567bcad48d2e3392a6232dcfaad5aaa7a0f2"
+    },
+    "generic": {
+      "path": "prompts/generic.md",
+      "sha256": "eaf131158ebad2ff35c96a7e322bcf7cbce6570fe7a2848e06bbb65bcdca4bd7"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "gate": "fallbackGate",
+  "status": "passed",
+  "measuredAt": "2026-08-22T03:22:13Z",
+  "signatures": [
+    "planner has no usable model",
+    "planner call failed",
+    "produced no tasks",
+    "router is not running"
+  ],
+  "cleanCompletedExecutionIds": [
+    "4d3292a2-fcd6-4fa8-bb25-0557d0314f36",
+    "367502d1-55df-4930-8278-2e6ebdae2be1",
+    "7b2b6f17-22d2-4385-b93c-ca5d17e74581"
+  ],
+  "cleanRunMatches": [],
+  "abortedFallbackProbes": [
+    {
+      "executionId": "16ec4b47-9fb6-47d6-9e60-aa0e62aae829",
+      "itemId": "coding-visible-0041",
+      "cause": "Hosted Qwen Planner returned HTTP 503 Service Unavailable: All backends temporarily unavailable.",
+      "fallbackPlanGenerated": true,
+      "plannedTaskCount": 1,
+      "executedTaskCount": 0,
+      "tokensConsumed": 0,
+      "operatorAction": "Rejected the fallback plan, supplied retry feedback, then cancelled when the native Planner did not recover.",
+      "includedInCandidateResults": false
+    },
+    {
+      "executionId": "8d107fe8-b56c-46e4-b57a-9f2486527207",
+      "itemId": "math-visible-0001",
+      "requestUtf8Bytes": 961,
+      "requestSha256": "6ebebc08849954505fcbcc8b2c035b3588f13650765bddf00f0fe1fb05ce618f",
+      "cause": "Hosted Qwen Planner returned HTTP 503 Service Unavailable: All backends temporarily unavailable.",
+      "fallbackPlanGenerated": true,
+      "plannedTaskCount": 1,
+      "executedTaskCount": 0,
+      "tokensConsumed": 0,
+      "operatorAction": "Rejected the fallback plan and cancelled the automatic replan before Solver execution.",
+      "includedInCandidateResults": false
+    },
+    {
+      "executionId": "74b78643-0222-4ffd-88c0-dc4f50e30118",
+      "itemId": "math-visible-0001",
+      "requestUtf8Bytes": 961,
+      "requestSha256": "6ebebc08849954505fcbcc8b2c035b3588f13650765bddf00f0fe1fb05ce618f",
+      "cause": "The single permitted retry returned the same hosted Qwen Planner HTTP 503.",
+      "fallbackPlanGenerated": true,
+      "plannedTaskCount": 1,
+      "executedTaskCount": 0,
+      "tokensConsumed": 0,
+      "operatorAction": "Rejected the fallback plan and cancelled the automatic replan; Generic and Coding smoke requests were not started.",
+      "includedInCandidateResults": false
+    }
+  ],
+  "fanoutObservedInCompletedCandidateRuns": false,
+  "decision": "The kill-switch worked for all three probes: each fallback was stopped before any Solver task or recorded token spend. The cost-limited three-track smoke remains pending until the native Qwen Planner is available, and a future promoted run must still complete without fallback."
+}

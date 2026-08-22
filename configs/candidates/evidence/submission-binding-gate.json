@@ -1,0 +1,57 @@
+{
+  "gate": "submissionBindingGate",
+  "status": "passed",
+  "measuredAt": "2026-08-22T02:56:26Z",
+  "localMapping": {
+    "source": "artifacts/aigo-workspace/.squad.json",
+    "delivery": "configs/candidates/argus-c0.delivery.json",
+    "plannerModel": "furiosa-ai/Qwen3-32B-FP8",
+    "solverModel": "furiosa-ai/gpt-oss-120b",
+    "workspaceSquadSha256": "b78b79eb7b3cf8680aa554eb4cee53523f5b06040008f54e4e1dfca1b86a1896",
+    "liveConfigSha256": "bb34ae4309f4987999d3cc807a1477d529af6c7878cef872550b59f625486651",
+    "deliverySha256": "9a23bc6f40cf57b0bc988f73afad846429ce6663e6300931049478d127b04d4f"
+  },
+  "portalSession": {
+    "authenticated": true,
+    "team": "DemoDayCare",
+    "evaluationQuota": "Active"
+  },
+  "portalCheck": {
+    "performed": true,
+    "costsQueueSlot": false,
+    "payloadPrepared": true,
+    "result": "No problems found",
+    "runnerValidation": "This submission satisfies every rule the evaluation runner enforces.",
+    "queued": false,
+    "waitingSubmissions": 0,
+    "runsInFlight": 0,
+    "attempts": 2,
+    "firstAttempt": "Rejected only because the signed form belonged to an earlier page version; the portal preserved all fields and instructed the operator to press Check again.",
+    "preparedHashes": {
+      "squad": "b78b79eb7b3cf8680aa554eb4cee53523f5b06040008f54e4e1dfca1b86a1896",
+      "coding": "e309b316d46ee73ce6d82657f6da0fcdfb22eb108c5e4e2479a3f93bfbdb7c1c",
+      "math": "403e2bcb5a67f5dfcc6862e326d4567bcad48d2e3392a6232dcfaad5aaa7a0f2",
+      "generic": "eaf131158ebad2ff35c96a7e322bcf7cbce6570fe7a2848e06bbb65bcdca4bd7"
+    },
+    "preparedBytes": {
+      "squad": 5126,
+      "coding": 552,
+      "math": 608,
+      "generic": 609
+    },
+    "warnings": [
+      {
+        "path": "template.config.agents[0].settingsOverrides",
+        "code": "SETTINGS_OVERRIDES_NOT_PROPAGATED",
+        "message": "Agent max-token, iteration, and tool-call bounds are not part of the evaluation Squad template; event per-run caps apply instead."
+      },
+      {
+        "path": "template.config.agents[1].settingsOverrides",
+        "code": "SETTINGS_OVERRIDES_NOT_PROPAGATED",
+        "message": "Agent max-token, iteration, and tool-call bounds are not part of the evaluation Squad template; event per-run caps apply instead."
+      }
+    ],
+    "reason": "After explicit user approval, the signed-in DemoDayCare portal validated the exact read-back payload with no rejecting problem. The check queued nothing. Two non-rejecting warnings establish that local settingsOverrides do not reach evaluation. Submit to the queue was not clicked."
+  },
+  "decision": "Treat the exact Squad and prompt binding as statically accepted by the runner. Keep event caps authoritative and unverified until a separately approved evaluation run, and keep Submit to the queue behind separate approval."
+}

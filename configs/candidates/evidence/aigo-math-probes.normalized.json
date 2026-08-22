@@ -1,0 +1,473 @@
+[
+  {
+    "runId": "7b2b6f17-22d2-4385-b93c-ca5d17e74581",
+    "portalRunId": null,
+    "source": "aigo",
+    "track": "math",
+    "dataset": "AI:GO direct",
+    "itemId": null,
+    "status": "completed",
+    "score": null,
+    "finalAnswer": "**Execution complete** — 1 task(s) processed in 1 wave(s).\n\n1. ✅ **Solve Math Question: What is 2+2?**  \n   Agent: `ARGUS Solver`",
+    "outcome": "unknown",
+    "failure": null,
+    "caps": {
+      "runTokens": null,
+      "itemWallclockSeconds": null,
+      "usedTokens": 826,
+      "elapsedMs": 111727
+    },
+    "totals": {
+      "input": 563,
+      "output": 263,
+      "reasoning": 0,
+      "cachedInput": 0,
+      "normalizedCost": 0,
+      "latencyMs": 111727
+    },
+    "modelUsage": [
+      {
+        "model": "unattributed-ai-go",
+        "calls": 1,
+        "input": 563,
+        "output": 263,
+        "reasoning": 0,
+        "cachedInput": 0,
+        "normalizedCost": 0,
+        "latencyMs": 111727
+      }
+    ],
+    "hashes": {
+      "dataset": null,
+      "squadConfig": null,
+      "submissionJson": null,
+      "prompt": null
+    },
+    "compliance": {
+      "userToolsZero": null,
+      "plannerNativeProtocol": null,
+      "memoryOff": null,
+      "hashesPresent": false,
+      "outputContract": false,
+      "fallbackFree": true
+    },
+    "events": [
+      {
+        "eventId": "evt-task-1-created",
+        "runId": "7b2b6f17-22d2-4385-b93c-ca5d17e74581",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "cae34d04-2627-43d2-999d-5b28225925ec",
+        "taskTitle": "Solve Math Question: What is 2+2?",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.created",
+        "state": "queued",
+        "decision": "Solve Math Question: What is 2+2?",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0
+        },
+        "durationMs": 4437,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.786Z",
+        "raw": {
+          "taskId": "cae34d04-2627-43d2-999d-5b28225925ec",
+          "title": "Solve Math Question: What is 2+2?",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "queued",
+          "output": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\nFINAL ANSWER: \\boxed{4}",
+          "error": null,
+          "durationMs": 4437,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-created",
+          "type": "task.created",
+          "message": "Solve Math Question: What is 2+2?",
+          "task_id": "cae34d04-2627-43d2-999d-5b28225925ec",
+          "agent_id": "ARGUS Solver"
+        }
+      },
+      {
+        "eventId": "evt-task-1-terminal",
+        "runId": "7b2b6f17-22d2-4385-b93c-ca5d17e74581",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "cae34d04-2627-43d2-999d-5b28225925ec",
+        "taskTitle": "Solve Math Question: What is 2+2?",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.completed",
+        "state": "completed",
+        "decision": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\nFINAL ANSWER: \\boxed{4}",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0
+        },
+        "durationMs": 4437,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.786Z",
+        "raw": {
+          "taskId": "cae34d04-2627-43d2-999d-5b28225925ec",
+          "title": "Solve Math Question: What is 2+2?",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "completed",
+          "output": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\nFINAL ANSWER: \\boxed{4}",
+          "error": null,
+          "durationMs": 4437,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-terminal",
+          "type": "task.completed",
+          "message": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\nFINAL ANSWER: \\boxed{4}",
+          "task_id": "cae34d04-2627-43d2-999d-5b28225925ec",
+          "agent_id": "ARGUS Solver"
+        }
+      }
+    ],
+    "rawEvidenceRefs": [
+      "artifacts/aigo-workspace/logs/history.json#0"
+    ],
+    "importedAt": "2026-08-21T22:17:38.786Z"
+  },
+  {
+    "runId": "367502d1-55df-4930-8278-2e6ebdae2be1",
+    "portalRunId": null,
+    "source": "aigo",
+    "track": "math",
+    "dataset": "AI:GO direct",
+    "itemId": null,
+    "status": "completed",
+    "score": null,
+    "finalAnswer": "**Execution complete** — 1 task(s) processed in 1 wave(s).\n\n1. ✅ **Solve 2+2 Arithmetic Problem**  \n   Agent: `ARGUS Solver`",
+    "outcome": "unknown",
+    "failure": null,
+    "caps": {
+      "runTokens": null,
+      "itemWallclockSeconds": null,
+      "usedTokens": 583,
+      "elapsedMs": 33304
+    },
+    "totals": {
+      "input": 383,
+      "output": 200,
+      "reasoning": 0,
+      "cachedInput": 0,
+      "normalizedCost": 0,
+      "latencyMs": 33304
+    },
+    "modelUsage": [
+      {
+        "model": "unattributed-ai-go",
+        "calls": 1,
+        "input": 383,
+        "output": 200,
+        "reasoning": 0,
+        "cachedInput": 0,
+        "normalizedCost": 0,
+        "latencyMs": 33304
+      }
+    ],
+    "hashes": {
+      "dataset": null,
+      "squadConfig": null,
+      "submissionJson": null,
+      "prompt": null
+    },
+    "compliance": {
+      "userToolsZero": null,
+      "plannerNativeProtocol": null,
+      "memoryOff": null,
+      "hashesPresent": false,
+      "outputContract": false,
+      "fallbackFree": true
+    },
+    "events": [
+      {
+        "eventId": "evt-task-1-created",
+        "runId": "367502d1-55df-4930-8278-2e6ebdae2be1",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+        "taskTitle": "Solve 2+2 Arithmetic Problem",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.created",
+        "state": "queued",
+        "decision": "Solve 2+2 Arithmetic Problem",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0
+        },
+        "durationMs": 3398,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.791Z",
+        "raw": {
+          "taskId": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+          "title": "Solve 2+2 Arithmetic Problem",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "queued",
+          "output": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\n$$\n\\boxed{4}\n$$",
+          "error": null,
+          "durationMs": 3398,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-created",
+          "type": "task.created",
+          "message": "Solve 2+2 Arithmetic Problem",
+          "task_id": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+          "agent_id": "ARGUS Solver"
+        }
+      },
+      {
+        "eventId": "evt-task-1-terminal",
+        "runId": "367502d1-55df-4930-8278-2e6ebdae2be1",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+        "taskTitle": "Solve 2+2 Arithmetic Problem",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.completed",
+        "state": "completed",
+        "decision": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\n$$\n\\boxed{4}\n$$",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 0,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0
+        },
+        "durationMs": 3398,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.791Z",
+        "raw": {
+          "taskId": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+          "title": "Solve 2+2 Arithmetic Problem",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "completed",
+          "output": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\n$$\n\\boxed{4}\n$$",
+          "error": null,
+          "durationMs": 3398,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-terminal",
+          "type": "task.completed",
+          "message": "\n\nThe arithmetic operation 2+2 is performed in the domain of integers. Both operands are positive integers, and their sum is computed directly without symbolic interpretation. The result is the exact integer **4**.\n\n$$\n\\boxed{4}\n$$",
+          "task_id": "b15a690a-0798-478a-841c-2ac4959b6c6d",
+          "agent_id": "ARGUS Solver"
+        }
+      }
+    ],
+    "rawEvidenceRefs": [
+      "artifacts/aigo-workspace/logs/history.json#1"
+    ],
+    "importedAt": "2026-08-21T22:17:38.791Z"
+  },
+  {
+    "runId": "4d3292a2-fcd6-4fa8-bb25-0557d0314f36",
+    "portalRunId": null,
+    "source": "aigo",
+    "track": "math",
+    "dataset": "AI:GO direct",
+    "itemId": null,
+    "status": "completed",
+    "score": null,
+    "finalAnswer": "**Execution complete** — 1 task(s) processed in 1 wave(s).\n\n1. ✅ **Solve 2+2**  \n   Agent: `ARGUS Solver`",
+    "outcome": "unknown",
+    "failure": null,
+    "caps": {
+      "runTokens": null,
+      "itemWallclockSeconds": null,
+      "usedTokens": 665,
+      "elapsedMs": 106857
+    },
+    "totals": {
+      "input": 370,
+      "output": 295,
+      "reasoning": 0,
+      "cachedInput": 0,
+      "normalizedCost": 0,
+      "latencyMs": 106857
+    },
+    "modelUsage": [
+      {
+        "model": "unattributed-ai-go",
+        "calls": 1,
+        "input": 370,
+        "output": 295,
+        "reasoning": 0,
+        "cachedInput": 0,
+        "normalizedCost": 0,
+        "latencyMs": 106857
+      }
+    ],
+    "hashes": {
+      "dataset": null,
+      "squadConfig": null,
+      "submissionJson": null,
+      "prompt": null
+    },
+    "compliance": {
+      "userToolsZero": null,
+      "plannerNativeProtocol": null,
+      "memoryOff": null,
+      "hashesPresent": false,
+      "outputContract": false,
+      "fallbackFree": true
+    },
+    "events": [
+      {
+        "eventId": "evt-task-1-created",
+        "runId": "4d3292a2-fcd6-4fa8-bb25-0557d0314f36",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+        "taskTitle": "Solve 2+2",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.created",
+        "state": "queued",
+        "decision": "Solve 2+2",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 4,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0.8
+        },
+        "durationMs": 4800,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.792Z",
+        "raw": {
+          "taskId": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+          "title": "Solve 2+2",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "queued",
+          "output": "\n\n4",
+          "error": null,
+          "durationMs": 4800,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-created",
+          "type": "task.created",
+          "message": "Solve 2+2",
+          "task_id": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+          "agent_id": "ARGUS Solver"
+        }
+      },
+      {
+        "eventId": "evt-task-1-terminal",
+        "runId": "4d3292a2-fcd6-4fa8-bb25-0557d0314f36",
+        "parentEventId": null,
+        "track": "math",
+        "wave": null,
+        "taskId": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+        "taskTitle": "Solve 2+2",
+        "dependsOnTaskIds": [],
+        "agentId": "ARGUS Solver",
+        "agentRole": null,
+        "model": null,
+        "kind": "task.completed",
+        "state": "completed",
+        "decision": "\n\n4",
+        "artifactRef": null,
+        "candidateStatus": "observed",
+        "tokens": {
+          "input": 0,
+          "output": 4,
+          "reasoning": 0,
+          "cachedInput": 0,
+          "normalizedCost": 0.8
+        },
+        "durationMs": 4800,
+        "squadConfigHash": null,
+        "submissionJsonHash": null,
+        "promptHash": null,
+        "timestamp": "2026-08-21T22:17:38.792Z",
+        "raw": {
+          "taskId": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+          "title": "Solve 2+2",
+          "agentId": "agent-1787348447897-1ykhha5",
+          "agentName": "ARGUS Solver",
+          "status": "completed",
+          "output": "\n\n4",
+          "error": null,
+          "durationMs": 4800,
+          "tokenUsage": {
+            "promptTokens": 0,
+            "completionTokens": 0
+          },
+          "id": "evt-task-1-terminal",
+          "type": "task.completed",
+          "message": "\n\n4",
+          "task_id": "248ce0f9-90bc-4647-8e99-e63b4d6b6a21",
+          "agent_id": "ARGUS Solver"
+        }
+      }
+    ],
+    "rawEvidenceRefs": [
+      "artifacts/aigo-workspace/logs/history.json#2"
+    ],
+    "importedAt": "2026-08-21T22:17:38.792Z"
+  }
+]
