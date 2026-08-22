@@ -4,13 +4,13 @@ import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { Activity, Binary, CheckCircle2, ChevronRight, CircleGauge, GitCompareArrows, Import, Radar, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ArgusEvent, ArgusRun } from "../../../lab/lib/types.ts";
-import { CapView, CompareView, ComplianceView, FailuresView, Provenance, TokenFlow } from "./components/AnalysisViews.tsx";
+import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusRun } from "../../../lab/lib/types.ts";
+import { CapView, CompareView, ComplianceView, DataArrivalFlow, FailuresView, TokenFlow } from "./components/AnalysisViews.tsx";
 import { Inspector } from "./components/Inspector.tsx";
-import { PeerButton, PeerSelect, PeerToastViewport } from "./components/peer/PeerControls.tsx";
+import { UiButton, UiSelect, UiToastViewport } from "./components/ui/Controls.tsx";
 import { Swimlanes } from "./components/Swimlanes.tsx";
 import { TaskGraph } from "./components/TaskGraph.tsx";
-import { demoRuns } from "./data/demo.ts";
+import { demoBatches, demoRuns, makeImportedBatch } from "./data/demo.ts";
 import { agentNames, capShare, dependencyWaveCount, finalAnswerPreview, formatDuration, formatNumber, modelNames, taskCount, visibleEvents } from "./derive.ts";
 
 type View = "replay" | "compare" | "caps" | "failures" | "compliance";
@@ -30,12 +30,15 @@ function isArgusRun(value: unknown): value is ArgusRun {
 }
 
 function StatusMark({ run }: { run: ArgusRun }) {
-  const contractFailed = run.status === "completed" && run.compliance.outputContract === false;
-  const ungraded = run.status === "completed" && run.outcome === "unknown" && !contractFailed;
-  const label = contractFailed ? "Contract failed" : ungraded ? "Completed · ungraded" : run.status.replaceAll("_", " ");
-  const tone = contractFailed ? "failed" : ungraded ? "unknown" : run.status;
-  const Icon = run.status === "completed" && !contractFailed ? CheckCircle2 : TriangleAlert;
-  return <span className={`status-mark status-${tone}`}><Icon size={14} aria-hidden="true" />{label}</span>;
+  const Icon = run.status === "completed" ? CheckCircle2 : TriangleAlert;
+  return <span className={`status-mark status-${run.status}`}><Icon size={14} aria-hidden="true" />Execution · {run.status.replaceAll("_", " ")}</span>;
+}
+
+function PortalMark({ run }: { run: ArgusRun }) {
+  const passed = run.outcome === "graded";
+  const unknown = run.outcome === "unknown";
+  const Icon = passed ? CheckCircle2 : TriangleAlert;
+  return <span className={`status-mark status-${unknown ? "unknown" : passed ? "completed" : "failed"}`}><Icon size={14} aria-hidden="true" />Portal · {run.outcome.replaceAll("_", " ")}</span>;
 }
 
 function displayRunId(runId: string): string {
@@ -60,7 +63,7 @@ function Overview({ run }: { run: ArgusRun }) {
     <header className="run-overview">
       <div className="run-title-block">
         <div className="run-kicker"><span className={`track-mark track-${run.track}`} aria-hidden="true" />{run.track}<span aria-hidden="true">/</span>{run.dataset}</div>
-        <div className="run-title-line"><h1 title={run.runId}>{displayRunId(run.runId)}</h1><StatusMark run={run} /></div>
+        <div className="run-title-line"><h1 title={run.runId}>{displayRunId(run.runId)}</h1><div className="run-statuses"><StatusMark run={run} /><PortalMark run={run} /></div></div>
         <p>{detailLabel}</p>
         <Collapsible.Root className="final-answer-collapsible">
           <Collapsible.Trigger className="final-answer-trigger" disabled={!finalAnswer}>
@@ -76,8 +79,38 @@ function Overview({ run }: { run: ArgusRun }) {
   );
 }
 
+function settingLabel(value: number | null, suffix = ""): string {
+  return value == null ? "Unknown" : `${formatNumber(value, 0)}${suffix}`;
+}
+
+function BatchContext({ batch, item }: { batch: ArgusBatch; item: ArgusBatchItem }) {
+  const observedTasks = taskCount(item.trace);
+  const overTaskLimit = batch.settings.maxTasks != null && observedTasks > batch.settings.maxTasks;
+  const settings = [
+    ["Items", `${batch.items.length}`, "executions in batch"],
+    ["Concurrency", settingLabel(batch.settings.maxConcurrentTasks), "max concurrent tasks"],
+    ["Max tasks", settingLabel(batch.settings.maxTasks), `${observedTasks} observed in selected item`],
+    ["Task timeout", settingLabel(batch.settings.taskTimeoutSeconds, " s"), "configured execution timeout"],
+    ["Request guard", settingLabel(batch.settings.directRequestByteLimit, " B"), "direct request byte limit"]
+  ];
+  return (
+    <section className="batch-context" aria-labelledby="batch-context-title">
+      <div className="batch-context-heading">
+        <div><p className="eyebrow">Batch context</p><h2 id="batch-context-title">{batch.name}</h2></div>
+        <code>{batch.batchId}</code>
+      </div>
+      <dl className="batch-settings">
+        {settings.map(([label, value, note]) => <div key={label} className={label === "Max tasks" && overTaskLimit ? "is-violated" : ""}><dt>{label}</dt><dd>{value}</dd><small>{note}</small></div>)}
+      </dl>
+    </section>
+  );
+}
+
 function AppContent() {
-  const [runs, setRuns] = useState<ArgusRun[]>(demoRuns);
+  const initialLoadedAt = useRef(new Date().toISOString());
+  const [batches, setBatches] = useState<ArgusBatch[]>(demoBatches);
+  const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries(demoRuns.map((item) => [item.runId, initialLoadedAt.current])));
+  const [selectedBatchId, setSelectedBatchId] = useState(demoBatches[0]!.batchId);
   const [selectedRunId, setSelectedRunId] = useState(demoRuns[0]!.runId);
   const [secondaryId, setSecondaryId] = useState(demoRuns[1]!.runId);
   const [view, setView] = useState<View>("replay");
@@ -89,7 +122,10 @@ function AppContent() {
   const [modelFilter, setModelFilter] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const toastManager = Toast.useToastManager();
-  const run = runs.find((item) => item.runId === selectedRunId) ?? runs[0]!;
+  const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0]!;
+  const runs = batch.items.map((candidate) => candidate.trace);
+  const item = batch.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch.items[0]!;
+  const run = item.trace;
   const revealed = useMemo(() => visibleEvents(run.events, progress), [run, progress]);
   const selectedEvent = run.events.find((event) => event.eventId === selectedEventId) ?? revealed.at(-1) ?? null;
 
@@ -122,27 +158,46 @@ function AppContent() {
     if (secondaryId === id) setSecondaryId(runs.find((item) => item.runId !== id)?.runId ?? id);
   }
 
+  function selectBatch(id: string) {
+    const nextBatch = batches.find((candidate) => candidate.batchId === id);
+    if (!nextBatch?.items.length) return;
+    const next = nextBatch.items[0]!.trace;
+    setSelectedBatchId(id);
+    setSelectedRunId(next.runId);
+    setSecondaryId(nextBatch.items[1]?.trace.runId ?? next.runId);
+    setProgress(1);
+    setPlaying(false);
+    setSelectedEventId(next.events.at(-1)?.eventId ?? null);
+    setAgentFilter("all");
+    setModelFilter("all");
+  }
+
   async function importEvidence(file: File) {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       const incoming = Array.isArray(parsed) ? parsed : [parsed];
-      if (!incoming.every(isArgusRun)) throw new Error("Use normalized ARGUS run JSON. Run the Lab importer on raw exports first.");
+      if (incoming.length === 0 || !incoming.every(isArgusRun)) throw new Error("Use compatible ARGUS run JSON. Adapt raw source evidence before loading it into Trace.");
       const first = incoming[0]!;
-      setRuns((current) => [...incoming, ...current.filter((existing) => !incoming.some((candidate) => candidate.runId === existing.runId))]);
+      const loadedAt = new Date().toISOString();
+      const importedBatch = makeImportedBatch(incoming, loadedAt);
+      setBatches((current) => [importedBatch, ...current.filter((existing) => existing.batchId !== importedBatch.batchId)]);
+      setLoadedAtByRunId((current) => ({ ...current, ...Object.fromEntries(incoming.map((item) => [item.runId, loadedAt])) }));
+      setSelectedBatchId(importedBatch.batchId);
       setSelectedRunId(first.runId);
+      setSecondaryId(incoming[1]?.runId ?? first.runId);
       setProgress(1);
       setPlaying(false);
       setSelectedEventId(first.events.at(-1)?.eventId ?? null);
       setAgentFilter("all");
       setModelFilter("all");
-      if (secondaryId === first.runId) setSecondaryId(runs.find((item) => item.runId !== first.runId)?.runId ?? first.runId);
-      toastManager.add({ title: "Run imported", description: `${first.runId} is now the active evidence source.` });
+      toastManager.add({ title: "Batch imported", description: `${importedBatch.name} is now active.` });
     } catch (error) {
       toastManager.add({ title: "Import failed", description: (error as Error).message, type: "error" });
     }
   }
 
-  const runOptions = runs.map((item) => ({ value: item.runId, label: `${item.runId} · ${item.track}` }));
+  const batchOptions = batches.map((candidate) => ({ value: candidate.batchId, label: `${candidate.name} · ${candidate.items.length} items` }));
+  const runOptions = runs.map((candidate) => ({ value: candidate.runId, label: `${candidate.itemId ?? candidate.runId} · ${candidate.track}` }));
   const trackOptions = [...new Set(runs.map((item) => item.track))].map((track) => ({ value: track, label: track }));
   const agentOptions = [{ value: "all", label: "All agents" }, ...agentNames(run).map((agent) => ({ value: agent, label: agent }))];
   const modelOptions = [{ value: "all", label: "All models" }, ...modelNames(run).map((model) => ({ value: model, label: model.split("/").at(-1) ?? model }))];
@@ -161,29 +216,34 @@ function AppContent() {
         </Tabs.List>
         <div className="sidebar-foot">
           <Binary size={16} aria-hidden="true" />
-          <div><span>Source priority</span><strong>{run.source === "demo" ? "Demonstration" : run.source === "portal" ? "Portal truth" : run.source === "aigo" ? "AI:GO export" : "Merged evidence"}</strong></div>
+          <div><span>Evidence mode</span><strong>{batch.source === "demo" ? "Separated demonstration sources" : "Imported source records"}</strong></div>
           <small>v0.1</small>
         </div>
       </aside>
 
       <main>
         <div className="topbar">
-          <PeerSelect className="run-picker" label="Loaded run" value={run.runId} options={runOptions} onValueChange={selectRun} />
+          <div className="evidence-pickers">
+            <UiSelect className="batch-picker" label="Batch" value={batch.batchId} options={batchOptions} onValueChange={selectBatch} />
+            <UiSelect className="run-picker" label="Item" value={run.runId} options={runOptions} onValueChange={selectRun} />
+          </div>
           <div className="topbar-actions">
-            {run.source === "demo" && <span className="demo-badge">Demo data</span>}
+            {batch.source === "demo" && <span className="demo-badge">Demo data</span>}
             <input ref={inputRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEvidence(file); event.target.value = ""; }} />
-            <PeerButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import run</PeerButton>
+            <UiButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import batch</UiButton>
           </div>
         </div>
+
+        <BatchContext batch={batch} item={item} />
 
         <Tabs.Panel className="view-stage" value="replay">
           <Overview run={run} />
           <div className="filter-strip" aria-label="Trace filters">
             <span>Focus</span>
-            <PeerSelect label="Track" value={run.track} options={trackOptions} onValueChange={(track) => { const next = runs.find((item) => item.track === track); if (next) selectRun(next.runId); }} />
-            <PeerSelect label="Agent" value={agentFilter} options={agentOptions} onValueChange={setAgentFilter} />
-            <PeerSelect label="Model" value={modelFilter} options={modelOptions} onValueChange={setModelFilter} />
-            {(agentFilter !== "all" || modelFilter !== "all") && <PeerButton variant="quiet" type="button" onClick={() => { setAgentFilter("all"); setModelFilter("all"); }}>Clear focus</PeerButton>}
+            <UiSelect label="Track" value={run.track} options={trackOptions} onValueChange={(track) => { const next = runs.find((item) => item.track === track); if (next) selectRun(next.runId); }} />
+            <UiSelect label="Agent" value={agentFilter} options={agentOptions} onValueChange={setAgentFilter} />
+            <UiSelect label="Model" value={modelFilter} options={modelOptions} onValueChange={setModelFilter} />
+            {(agentFilter !== "all" || modelFilter !== "all") && <UiButton variant="quiet" type="button" onClick={() => { setAgentFilter("all"); setModelFilter("all"); }}>Clear focus</UiButton>}
           </div>
           <div className="replay-layout">
             <div className="replay-main">
@@ -192,7 +252,7 @@ function AppContent() {
             </div>
             <Inspector event={selectedEvent} />
           </div>
-          <div className="lower-analysis"><TokenFlow run={run} modelFilter={modelFilter} /><Provenance run={run} /></div>
+          <div className="lower-analysis"><TokenFlow run={run} modelFilter={modelFilter} /><DataArrivalFlow item={item} loadedAt={loadedAtByRunId[run.runId] ?? run.importedAt} /></div>
         </Tabs.Panel>
         <Tabs.Panel className="view-stage" value="compare"><CompareView runs={runs} primary={run} secondaryId={secondaryId} onSecondary={setSecondaryId} /></Tabs.Panel>
         <Tabs.Panel className="view-stage" value="caps"><CapView runs={runs} run={run} /></Tabs.Panel>
@@ -208,7 +268,7 @@ export function App() {
     <Tooltip.Provider delay={350}>
       <Toast.Provider limit={3} timeout={6000}>
         <AppContent />
-        <PeerToastViewport />
+        <UiToastViewport />
       </Toast.Provider>
     </Tooltip.Provider>
   );

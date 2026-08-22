@@ -46,7 +46,7 @@ lossless native sequential delivery and a measured accuracy/cost Pareto gain.
 - `apps/argus-trace/` — interactive replay and comparison app
 - `artifacts/` — ignored locations for AI:GO workspaces, exports, and run evidence
 
-ARGUS Trace follows the Peer Design system: angular 1px surfaces, a 4px spacing scale,
+ARGUS Trace uses a local interface system with angular 1px surfaces, a 4px spacing scale,
 32px controls, light/dark tokens, and `@base-ui/react` compound primitives for tabs,
 selects, sliders, progress, tooltips, buttons, and toast feedback. State labels and
 accessible names remain authoritative; color is only a secondary cue.

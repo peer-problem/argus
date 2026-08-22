@@ -12,10 +12,10 @@ interface TaskGraphProps {
 }
 
 const stages = [
-  { key: "plan", label: "Plan", kinds: ["run.started", "plan.created"], Icon: Radar },
-  { key: "task", label: "Solve", kinds: ["task.created", "task.assigned", "task.started", "task.completed", "task.failed"], Icon: Route },
-  { key: "aggregate", label: "Aggregate", kinds: ["aggregation.started", "aggregation.completed"], Icon: CircleDot },
-  { key: "final", label: "Final", kinds: ["run.completed", "run.failed", "run.capped"], Icon: TerminalSquare }
+  { key: "plan", label: "Plan", role: "Native Planner", kinds: ["run.created", "run.started", "plan.created"], Icon: Radar },
+  { key: "task", label: "Solve", role: "ARGUS Solver", kinds: ["task.created", "task.assigned", "task.started", "task.completed", "task.failed"], Icon: Route },
+  { key: "aggregate", label: "Aggregate", role: "Native aggregation", kinds: ["aggregation.started", "aggregation.completed"], Icon: CircleDot },
+  { key: "final", label: "Final", role: "AI:GO Runtime", kinds: ["run.completed", "run.failed", "run.capped"], Icon: TerminalSquare }
 ] as const;
 
 export function TaskGraph({ run, events, onSelect, agentFilter = "all", modelFilter = "all" }: TaskGraphProps) {
@@ -51,7 +51,7 @@ export function TaskGraph({ run, events, onSelect, agentFilter = "all", modelFil
       </div>
       <div className="task-graph" aria-label="Task graph stages">
         <div className="graph-thread" aria-hidden="true"><span style={{ transform: `scaleX(${Math.min(1, events.length / Math.max(1, run.events.length))})` }} /></div>
-        {stages.map(({ key, label, kinds, Icon }, index) => {
+        {stages.map(({ key, label, role, kinds, Icon }, index) => {
           const stageEvents = events.filter((event) => (kinds as readonly string[]).includes(event.kind));
           const source = stageEvents.at(-1) ?? run.events.find((event) => (kinds as readonly string[]).includes(event.kind));
           const visible = stageEvents.length > 0;
@@ -68,7 +68,7 @@ export function TaskGraph({ run, events, onSelect, agentFilter = "all", modelFil
             >
               <span className="node-index">0{index + 1}</span>
               <span className="node-icon"><Icon size={17} strokeWidth={1.7} /></span>
-              <span className="node-copy"><strong>{label}</strong><small>{key === "task" ? "ARGUS Solver" : "ARGUS Planner"}</small></span>
+              <span className="node-copy"><strong>{label}</strong><small>{role}</small></span>
               <span className="node-state">{failed ? <TriangleAlert size={14} /> : visible ? <Check size={14} /> : null}</span>
             </Button>
           );
