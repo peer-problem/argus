@@ -1,33 +1,21 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { Tabs } from "@base-ui/react/tabs";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { Activity, Binary, CheckCircle2, ChevronRight, CircleGauge, GitCompareArrows, Import, Radar, ShieldCheck, TriangleAlert } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ChevronLeft, ChevronRight, GitCompareArrows, Import, Radar, TriangleAlert } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusRun } from "./types.ts";
-import { CapView, CompareView, ComplianceView, DataArrivalFlow, FailuresView, TokenFlow } from "./components/AnalysisViews.tsx";
+import { DataArrivalFlow, RunSignals, TokenFlow } from "./components/AnalysisViews.tsx";
+import { isArgusRun } from "./contracts.ts";
+import { ExecutionTrace } from "./components/ExecutionTrace.tsx";
 import { Inspector } from "./components/Inspector.tsx";
-import { UiButton, UiSelect, UiToastViewport } from "./components/ui/Controls.tsx";
-import { Swimlanes } from "./components/Swimlanes.tsx";
-import { TaskGraph } from "./components/TaskGraph.tsx";
+import { UiButton, UiToastViewport } from "./components/ui/Controls.tsx";
 import { demoBatches, demoRuns, makeImportedBatch } from "./data/demo.ts";
-import { agentNames, capShare, dependencyWaveCount, finalAnswerPreview, formatDuration, formatNumber, modelNames, taskCount, visibleEvents } from "./derive.ts";
+import { demoPortalReports } from "./data/portalReports.ts";
+import { capShare, dependencyWaveCount, finalAnswerPreview, formatDuration, formatNumber, taskCount, timelineDuration, visibleEvents } from "./derive.ts";
 
-type View = "replay" | "compare" | "caps" | "failures" | "compliance";
+type View = "details" | "compare";
 
-const navigation: Array<{ view: View; label: string; Icon: typeof Activity }> = [
-  { view: "replay", label: "Run replay", Icon: Activity },
-  { view: "compare", label: "Compare runs", Icon: GitCompareArrows },
-  { view: "caps", label: "Cap burn-down", Icon: CircleGauge },
-  { view: "failures", label: "Failure ownership", Icon: TriangleAlert },
-  { view: "compliance", label: "Compliance", Icon: ShieldCheck }
-];
-
-function isArgusRun(value: unknown): value is ArgusRun {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<ArgusRun>;
-  return typeof candidate.runId === "string" && Array.isArray(candidate.events) && Boolean(candidate.totals) && Boolean(candidate.compliance);
-}
+const CompareRuns = lazy(() => import("./components/CompareRuns.tsx").then((module) => ({ default: module.CompareRuns })));
 
 function StatusMark({ run }: { run: ArgusRun }) {
   const Icon = run.status === "completed" ? CheckCircle2 : TriangleAlert;
@@ -45,35 +33,46 @@ function displayRunId(runId: string): string {
   return runId.length > 26 ? `${runId.slice(0, 6)}…${runId.slice(-4)}` : runId;
 }
 
+function runTimestamp(run: ArgusRun): number {
+  return new Date(run.events.at(-1)?.timestamp ?? run.importedAt).valueOf();
+}
+
+function runClock(run: ArgusRun): string {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(runTimestamp(run));
+}
+
+const initialDemoRun = [...demoRuns].sort((a, b) => runTimestamp(b) - runTimestamp(a))[0]!;
+
+function conciseRunWarning(run: ArgusRun): string | null {
+  if (run.outcome === "extraction_failed") return "Required final-answer format was not met.";
+  if (run.status === "capped") return "Run stopped at its configured limit.";
+  if (run.status === "failed" || run.failure) return "Run failed before a final answer was accepted.";
+  return null;
+}
+
 function Overview({ run }: { run: ArgusRun }) {
-  const cap = capShare(run);
-  const tasks = taskCount(run);
-  const waves = dependencyWaveCount(run);
   const finalAnswer = run.finalAnswer?.trim() ?? "";
-  const modelLabel = run.modelUsage.map((usage) => usage.model.split("/").at(-1)).join(" + ");
-  const detailLabel = [run.itemId, modelLabel].filter(Boolean).join(" · ") || "No item or model attribution";
-  const metrics = [
-    ["Score", run.score == null ? "—" : `${Math.round(run.score * 100)}%`, run.outcome.replaceAll("_", " ")],
-    ["Tokens", formatNumber(run.caps.usedTokens, 0), cap == null ? "cap unknown" : `${Math.round(cap * 100)}% of cap`],
-    ["Cost", formatNumber(run.totals.normalizedCost, 0), "normalized units"],
-    ["Time", formatDuration(run.totals.latencyMs), `${run.events.length} events`],
-    ["Graph", `${tasks || "—"} ${tasks === 1 ? "task" : "tasks"}`, waves ? `${waves} dependency ${waves === 1 ? "wave" : "waves"}` : "topology not observed"]
+  const facts = [
+    ["Score", run.score == null ? "—" : `${Math.round(run.score * 100)}%`],
+    ["Tokens", formatNumber(run.caps.usedTokens, 0)],
+    ["Duration", formatDuration(run.totals.latencyMs)],
+    ["Cost", formatNumber(run.totals.normalizedCost, 0)]
   ];
+  const warning = conciseRunWarning(run);
   return (
     <header className="run-overview">
       <div className="run-title-block">
-        <div className="run-kicker"><span className={`track-mark track-${run.track}`} aria-hidden="true" />{run.track}<span aria-hidden="true">/</span>{run.dataset}</div>
         <div className="run-title-line"><h1 title={run.runId}>{displayRunId(run.runId)}</h1><div className="run-statuses"><StatusMark run={run} /><PortalMark run={run} /></div></div>
-        <p>{detailLabel}</p>
-        <Collapsible.Root className="final-answer-collapsible">
-          <Collapsible.Trigger className="final-answer-trigger" disabled={!finalAnswer}>
+        {warning && <p className="run-failure-summary" role="alert"><TriangleAlert size={14} aria-hidden="true" /><span>{warning}</span></p>}
+        {finalAnswer ? <Collapsible.Root className="final-answer-collapsible">
+          <Collapsible.Trigger className="final-answer-trigger">
             <span>Final answer</span><code>{finalAnswerPreview(run.finalAnswer)}</code><ChevronRight className="final-answer-icon" size={15} aria-hidden="true" />
           </Collapsible.Trigger>
-          {finalAnswer && <Collapsible.Panel className="final-answer-panel"><pre>{run.finalAnswer}</pre></Collapsible.Panel>}
-        </Collapsible.Root>
+          <Collapsible.Panel className="final-answer-panel"><pre>{run.finalAnswer}</pre></Collapsible.Panel>
+        </Collapsible.Root> : <div className="final-answer-empty"><span>Final answer</span><code>Not observed</code></div>}
       </div>
-      <dl className="overview-metrics">
-        {metrics.map(([label, value, note]) => <div key={label}><dt>{label}</dt><dd>{value}</dd><small>{note}</small></div>)}
+      <dl className="overview-facts" aria-label="Run summary">
+        {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
       </dl>
     </header>
   );
@@ -83,26 +82,49 @@ function settingLabel(value: number | null, suffix = ""): string {
   return value == null ? "Unknown" : `${formatNumber(value, 0)}${suffix}`;
 }
 
-function BatchContext({ batch, item }: { batch: ArgusBatch; item: ArgusBatchItem }) {
+function RunLimits({ batch, item }: { batch: ArgusBatch; item: ArgusBatchItem }) {
   const observedTasks = taskCount(item.trace);
   const overTaskLimit = batch.settings.maxTasks != null && observedTasks > batch.settings.maxTasks;
   const settings = [
-    ["Items", `${batch.items.length}`, "executions in batch"],
-    ["Concurrency", settingLabel(batch.settings.maxConcurrentTasks), "max concurrent tasks"],
-    ["Max tasks", settingLabel(batch.settings.maxTasks), `${observedTasks} observed in selected item`],
-    ["Task timeout", settingLabel(batch.settings.taskTimeoutSeconds, " s"), "configured execution timeout"],
-    ["Request guard", settingLabel(batch.settings.directRequestByteLimit, " B"), "direct request byte limit"]
+    ["Task limit", settingLabel(batch.settings.maxTasks), `${observedTasks} observed`],
+    ["Concurrency", settingLabel(batch.settings.maxConcurrentTasks), "maximum"],
+    ["Task timeout", settingLabel(batch.settings.taskTimeoutSeconds, " s"), "configured"],
+    ["Request limit", settingLabel(batch.settings.directRequestByteLimit, " B"), "direct request"],
+    ["Imported runs", `${batch.items.length}`, "same evidence set"]
   ];
   return (
-    <section className="batch-context" aria-labelledby="batch-context-title">
-      <div className="batch-context-heading">
-        <div><p className="eyebrow">Batch context</p><h2 id="batch-context-title">{batch.name}</h2></div>
-        <code>{batch.batchId}</code>
-      </div>
-      <dl className="batch-settings">
-        {settings.map(([label, value, note]) => <div key={label} className={label === "Max tasks" && overTaskLimit ? "is-violated" : ""}><dt>{label}</dt><dd>{value}</dd><small>{note}</small></div>)}
+    <section className="run-limits" aria-labelledby="run-limits-title">
+      <h2 id="run-limits-title">Run limits</h2>
+      <dl>
+        {settings.map(([label, value, note]) => <div key={label} className={label === "Task limit" && overTaskLimit ? "is-violated" : ""}><dt>{label}</dt><dd>{value}</dd><small>{note}</small></div>)}
       </dl>
     </section>
+  );
+}
+
+function AuditDetails({ batch, item, loadedAt }: { batch: ArgusBatch; item: ArgusBatchItem; loadedAt: string }) {
+  const run = item.trace;
+  const cap = capShare(run);
+  const checks = Object.values(run.compliance).filter((value) => value === true).length;
+  return (
+    <Collapsible.Root className="audit-details">
+      <Collapsible.Trigger className="audit-details-trigger">
+        <span className="audit-details-title"><strong>Audit details</strong><small>Limits, compliance, provenance</small></span>
+        <span className="audit-details-summary">
+          {run.failure && <b className="audit-danger">Failure recorded</b>}
+          <b>{cap == null ? "Cap unknown" : `${Math.round(cap * 100)}% cap`}</b>
+          <b>{checks}/{Object.keys(run.compliance).length} checks</b>
+          <ChevronRight className="audit-details-icon" size={16} aria-hidden="true" />
+        </span>
+      </Collapsible.Trigger>
+      <Collapsible.Panel className="audit-details-panel">
+        <div className="audit-details-content">
+          <RunSignals run={run} />
+          <RunLimits batch={batch} item={item} />
+          <div className="lower-analysis"><TokenFlow run={run} /><DataArrivalFlow item={item} loadedAt={loadedAt} /></div>
+        </div>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   );
 }
 
@@ -111,22 +133,23 @@ function AppContent() {
   const [batches, setBatches] = useState<ArgusBatch[]>(demoBatches);
   const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries(demoRuns.map((item) => [item.runId, initialLoadedAt.current])));
   const [selectedBatchId, setSelectedBatchId] = useState(demoBatches[0]!.batchId);
-  const [selectedRunId, setSelectedRunId] = useState(demoRuns[0]!.runId);
-  const [secondaryId, setSecondaryId] = useState(demoRuns[1]!.runId);
-  const [view, setView] = useState<View>("replay");
+  const [selectedRunId, setSelectedRunId] = useState(initialDemoRun.runId);
+  const [selectedCompareReportId, setSelectedCompareReportId] = useState(demoPortalReports[0]?.reportId ?? "");
+  const [view, setView] = useState<View>("compare");
   const [progress, setProgress] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(demoRuns[0]!.events.at(-1)!.eventId);
-  const [agentFilter, setAgentFilter] = useState("all");
-  const [modelFilter, setModelFilter] = useState("all");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(initialDemoRun.events.at(-1)!.eventId);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const toastManager = Toast.useToastManager();
   const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0]!;
-  const runs = batch.items.map((candidate) => candidate.trace);
   const item = batch.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch.items[0]!;
   const run = item.trace;
-  const revealed = useMemo(() => visibleEvents(run.events, progress), [run, progress]);
+  const latestItems = useMemo(() => batches.flatMap((candidateBatch) => candidateBatch.items.map((candidateItem) => ({ batch: candidateBatch, item: candidateItem }))).sort((a, b) => runTimestamp(b.item.trace) - runTimestamp(a.item.trace)), [batches]);
+  const compareSelectionIndex = Math.max(0, demoPortalReports.findIndex((report) => report.reportId === selectedCompareReportId));
+  const activeListIndex = latestItems.length ? compareSelectionIndex % latestItems.length : -1;
+  const revealed = useMemo(() => visibleEvents(run.events, progress, timelineDuration(run)), [run, progress]);
   const selectedEvent = run.events.find((event) => event.eventId === selectedEventId) ?? revealed.at(-1) ?? null;
 
   useEffect(() => {
@@ -143,33 +166,36 @@ function AppContent() {
   }, [playing, speed]);
 
   useEffect(() => {
-    const latest = visibleEvents(run.events, progress).at(-1);
+    const latest = visibleEvents(run.events, progress, timelineDuration(run)).at(-1);
     if (playing && latest) setSelectedEventId(latest.eventId);
   }, [playing, progress, run]);
 
-  function selectRun(id: string) {
+  function activateRun(batchId: string, id: string) {
+    const nextBatch = batches.find((candidate) => candidate.batchId === batchId);
+    const nextRuns = nextBatch?.items.map((candidate) => candidate.trace) ?? [];
+    const next = nextRuns.find((candidate) => candidate.runId === id);
+    if (!nextBatch || !next) return;
+    setSelectedBatchId(batchId);
     setSelectedRunId(id);
-    const next = runs.find((item) => item.runId === id);
-    setProgress(1);
-    setPlaying(false);
-    setSelectedEventId(next?.events.at(-1)?.eventId ?? null);
-    setAgentFilter("all");
-    setModelFilter("all");
-    if (secondaryId === id) setSecondaryId(runs.find((item) => item.runId !== id)?.runId ?? id);
-  }
-
-  function selectBatch(id: string) {
-    const nextBatch = batches.find((candidate) => candidate.batchId === id);
-    if (!nextBatch?.items.length) return;
-    const next = nextBatch.items[0]!.trace;
-    setSelectedBatchId(id);
-    setSelectedRunId(next.runId);
-    setSecondaryId(nextBatch.items[1]?.trace.runId ?? next.runId);
     setProgress(1);
     setPlaying(false);
     setSelectedEventId(next.events.at(-1)?.eventId ?? null);
-    setAgentFilter("all");
-    setModelFilter("all");
+    setEvidenceOpen(false);
+    setView("details");
+  }
+
+  function openCompare() {
+    setView("compare");
+  }
+
+  function toggleRunDetail(batchId: string, id: string, listIndex: number) {
+    if (view === "details" && batchId === selectedBatchId && id === selectedRunId) {
+      openCompare();
+      return;
+    }
+    const linkedReport = demoPortalReports[listIndex % demoPortalReports.length];
+    if (linkedReport) setSelectedCompareReportId(linkedReport.reportId);
+    activateRun(batchId, id);
   }
 
   async function importEvidence(file: File) {
@@ -184,82 +210,69 @@ function AppContent() {
       setLoadedAtByRunId((current) => ({ ...current, ...Object.fromEntries(incoming.map((item) => [item.runId, loadedAt])) }));
       setSelectedBatchId(importedBatch.batchId);
       setSelectedRunId(first.runId);
-      setSecondaryId(incoming[1]?.runId ?? first.runId);
       setProgress(1);
       setPlaying(false);
       setSelectedEventId(first.events.at(-1)?.eventId ?? null);
-      setAgentFilter("all");
-      setModelFilter("all");
-      toastManager.add({ title: "Batch imported", description: `${importedBatch.name} is now active.` });
+      setEvidenceOpen(false);
+      setView("details");
+      toastManager.add({ title: "Evidence imported", description: `${incoming.length} run${incoming.length === 1 ? "" : "s"} added.` });
     } catch (error) {
       toastManager.add({ title: "Import failed", description: (error as Error).message, type: "error" });
     }
   }
 
-  const batchOptions = batches.map((candidate) => ({ value: candidate.batchId, label: `${candidate.name} · ${candidate.items.length} items` }));
-  const runOptions = runs.map((candidate) => ({ value: candidate.runId, label: `${candidate.itemId ?? candidate.runId} · ${candidate.track}` }));
-  const trackOptions = [...new Set(runs.map((item) => item.track))].map((track) => ({ value: track, label: track }));
-  const agentOptions = [{ value: "all", label: "All agents" }, ...agentNames(run).map((agent) => ({ value: agent, label: agent }))];
-  const modelOptions = [{ value: "all", label: "All models" }, ...modelNames(run).map((model) => ({ value: model, label: model.split("/").at(-1) ?? model }))];
-
   return (
-    <Tabs.Root className="app-shell" orientation="vertical" value={view} onValueChange={(next) => setView(next as View)}>
+    <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark"><Radar size={19} aria-hidden="true" /></span><span className="brand-copy"><strong>ARGUS</strong><small>Trace</small></span></div>
-        <Tabs.List className="primary-navigation" aria-label="Trace views">
-          {navigation.map(({ view: target, label, Icon }) => (
-            <Tabs.Tab key={target} className="primary-navigation-tab" value={target} aria-label={label}>
-              <Icon size={17} aria-hidden="true" /><span>{label}</span>
-            </Tabs.Tab>
-          ))}
-          <Tabs.Indicator className="primary-navigation-indicator" />
-        </Tabs.List>
-        <div className="sidebar-foot">
-          <Binary size={16} aria-hidden="true" />
-          <div><span>Evidence mode</span><strong>{batch.source === "demo" ? "Separated demonstration sources" : "Imported source records"}</strong></div>
-          <small>v0.1</small>
+        <div className="brand"><span className="brand-mark"><Radar size={19} aria-hidden="true" /></span><span className="brand-copy"><strong>ARGUS</strong></span></div>
+        <div className="sidebar-action">
+          <UiButton variant={view === "compare" ? "primary" : "quiet"} type="button" onClick={openCompare}><GitCompareArrows size={16} aria-hidden="true" />Compare runs</UiButton>
         </div>
+        <section className="run-index" aria-labelledby="run-index-title">
+          <div className="run-index-head"><strong id="run-index-title">Runs</strong><small>{latestItems.length}</small></div>
+          <ol>
+            {latestItems.map(({ batch: candidateBatch, item: candidateItem }, listIndex) => {
+              const candidate = candidateItem.trace;
+              const active = listIndex === activeListIndex;
+              const detailOpen = view === "details" && candidate.runId === run.runId && candidateBatch.batchId === batch.batchId;
+              const failed = Boolean(candidate.failure) || candidate.status === "failed" || candidate.status === "capped";
+              const listStatus = candidate.outcome !== "graded" && candidate.outcome !== "unknown" ? candidate.outcome : candidate.status;
+              const StateIcon = failed ? TriangleAlert : CheckCircle2;
+              return <li key={`${candidateBatch.batchId}:${candidate.runId}`}>
+                <div className={`run-index-item ${active ? "is-active" : ""} ${failed ? "is-failed" : ""}`}>
+                  <span className="run-index-copy">
+                    <span className="run-index-title"><strong>{displayRunId(candidate.runId)}</strong><span className={`run-index-status ${failed ? "is-failed" : "is-success"}`} role="img" aria-label={listStatus.replaceAll("_", " ")}><StateIcon size={14} aria-hidden="true" /></span></span>
+                    <time dateTime={candidate.events.at(-1)?.timestamp ?? candidate.importedAt}>{runClock(candidate)}</time>
+                  </span>
+                  <button type="button" className={`run-index-open ${detailOpen ? "is-open" : ""}`} aria-label={detailOpen ? `Close ${displayRunId(candidate.runId)} run detail` : `Open ${displayRunId(candidate.runId)} run detail`} aria-pressed={detailOpen} onClick={() => toggleRunDetail(candidateBatch.batchId, candidate.runId, listIndex)}>{detailOpen ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}</button>
+                </div>
+              </li>;
+            })}
+          </ol>
+        </section>
       </aside>
 
-      <main>
+      <main className={view === "details" ? "detail-main" : "compare-main"}>
         <div className="topbar">
-          <div className="evidence-pickers">
-            <UiSelect className="batch-picker" label="Batch" value={batch.batchId} options={batchOptions} onValueChange={selectBatch} />
-            <UiSelect className="run-picker" label="Item" value={run.runId} options={runOptions} onValueChange={selectRun} />
-          </div>
+          <div className="topbar-context"><strong>{view === "compare" ? "Compare runs" : "Run detail"}</strong></div>
           <div className="topbar-actions">
-            {batch.source === "demo" && <span className="demo-badge">Demo data</span>}
             <input ref={inputRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEvidence(file); event.target.value = ""; }} />
-            <UiButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import batch</UiButton>
+            <UiButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import evidence</UiButton>
           </div>
         </div>
 
-        <BatchContext batch={batch} item={item} />
-
-        <Tabs.Panel className="view-stage" value="replay">
-          <Overview run={run} />
-          <div className="filter-strip" aria-label="Trace filters">
-            <span>Focus</span>
-            <UiSelect label="Track" value={run.track} options={trackOptions} onValueChange={(track) => { const next = runs.find((item) => item.track === track); if (next) selectRun(next.runId); }} />
-            <UiSelect label="Agent" value={agentFilter} options={agentOptions} onValueChange={setAgentFilter} />
-            <UiSelect label="Model" value={modelFilter} options={modelOptions} onValueChange={setModelFilter} />
-            {(agentFilter !== "all" || modelFilter !== "all") && <UiButton variant="quiet" type="button" onClick={() => { setAgentFilter("all"); setModelFilter("all"); }}>Clear focus</UiButton>}
-          </div>
-          <div className="replay-layout">
-            <div className="replay-main">
-              <TaskGraph run={run} events={revealed} agentFilter={agentFilter} modelFilter={modelFilter} onSelect={(event: ArgusEvent) => setSelectedEventId(event.eventId)} />
-              <Swimlanes run={run} events={revealed} selectedEventId={selectedEvent?.eventId ?? null} progress={progress} playing={playing} speed={speed} agentFilter={agentFilter} modelFilter={modelFilter} onProgress={setProgress} onPlaying={setPlaying} onSpeed={setSpeed} onSelect={(event: ArgusEvent) => setSelectedEventId(event.eventId)} />
+        {view === "details" ? <>
+          <div className="view-stage run-detail-stage">
+            <Overview run={run} />
+            <div className="trace-layout">
+              <ExecutionTrace run={run} selectedEventId={selectedEvent?.eventId ?? null} progress={progress} playing={playing} speed={speed} onProgress={setProgress} onPlaying={setPlaying} onSpeed={setSpeed} onSelect={(event: ArgusEvent) => { setSelectedEventId(event.eventId); setEvidenceOpen(true); }} />
+              <Inspector event={selectedEvent} open={evidenceOpen} onOpenChange={setEvidenceOpen} />
             </div>
-            <Inspector event={selectedEvent} />
+            <AuditDetails batch={batch} item={item} loadedAt={loadedAtByRunId[run.runId] ?? run.importedAt} />
           </div>
-          <div className="lower-analysis"><TokenFlow run={run} modelFilter={modelFilter} /><DataArrivalFlow item={item} loadedAt={loadedAtByRunId[run.runId] ?? run.importedAt} /></div>
-        </Tabs.Panel>
-        <Tabs.Panel className="view-stage" value="compare"><CompareView runs={runs} primary={run} secondaryId={secondaryId} onSecondary={setSecondaryId} /></Tabs.Panel>
-        <Tabs.Panel className="view-stage" value="caps"><CapView runs={runs} run={run} /></Tabs.Panel>
-        <Tabs.Panel className="view-stage" value="failures"><FailuresView runs={runs} /></Tabs.Panel>
-        <Tabs.Panel className="view-stage" value="compliance"><ComplianceView run={run} /></Tabs.Panel>
+        </> : <div className="view-stage compare-stage"><Suspense fallback={<div className="compare-loading">Loading Run space…</div>}><CompareRuns reports={demoPortalReports} selectedId={selectedCompareReportId} onSelectedIdChange={setSelectedCompareReportId} /></Suspense></div>}
       </main>
-    </Tabs.Root>
+    </div>
   );
 }
 

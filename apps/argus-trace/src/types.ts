@@ -46,6 +46,9 @@ export interface ArgusEvent {
   candidateStatus?: "selected" | "rejected" | "observed" | "none";
   tokens: TokenUsage;
   durationMs: number;
+  squadConfigHash?: string | null;
+  submissionJsonHash?: string | null;
+  promptHash?: string | null;
   timestamp: string;
   raw?: Record<string, unknown> | null;
 }
@@ -54,6 +57,7 @@ export interface ModelUsage extends TokenUsage {
   model: string;
   calls: number;
   latencyMs: number;
+  contextWindowTokens?: number | null;
 }
 
 export interface ArgusRun {
@@ -131,4 +135,50 @@ export interface ArgusBatch {
   items: ArgusBatchItem[];
   createdAt: string;
   completedAt: string | null;
+}
+
+export interface PortalModelUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  requests: number;
+  totalTokens: number;
+}
+
+export interface PortalTrackResult {
+  track: Exclude<Track, "unknown">;
+  accuracy: number;
+  graded: number;
+  items: number;
+  excluded: number;
+  weight: number;
+}
+
+export interface PortalBatchRunReport {
+  reportId: string;
+  source: "portal";
+  team: string;
+  runName: string;
+  status: RunStatus;
+  score: number;
+  scoredItems: number;
+  totalItems: number;
+  executionTimeMs: number;
+  tokens: {
+    input: number;
+    output: number;
+    total: number;
+  };
+  caps: {
+    wallClockSeconds: number | null;
+    tokenLimit: number | null;
+  };
+  postedAt: string;
+  modelUsage: PortalModelUsage[];
+  trackResults: PortalTrackResult[];
+  evidence: {
+    protocol: "Run-details JSON export";
+    receivedAt: string;
+    reference: string;
+  };
 }
