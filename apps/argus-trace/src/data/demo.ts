@@ -19,21 +19,23 @@ interface DemoSpec {
   startedAt: string;
   track: Exclude<Track, "unknown">;
   itemId: string;
-  dataset: string;
-  score: number;
+  dataset: string | null;
+  score: number | null;
   input: number;
   output: number;
-  cached: number;
-  cost: number;
+  cached: number | null;
+  cost: number | null;
   latency: number;
   plannerModel: string;
   solverModel: string;
-  finalAnswer: string;
+  finalAnswer: string | null;
   status?: ArgusRun["status"];
   outcome?: ArgusRun["outcome"];
   failure?: ArgusRun["failure"];
   compliant?: boolean;
   taskCount?: number;
+  eventTimingsObserved?: boolean;
+  includeInferredAgentState?: boolean;
 }
 
 export interface DataArrival {
@@ -67,6 +69,8 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
   const nativeCapped = spec.status === "capped";
   const nativeFailed = spec.outcome === "infrastructure_failed";
   const nativeCompleted = !nativeCapped && !nativeFailed;
+  const cached = spec.cached ?? 0;
+  const cost = spec.cost ?? 0;
   const terminalOffset = spec.latency;
   const planOffset = Math.min(1_200, Math.max(700, Math.round(spec.latency * 0.08)));
   const taskWindowStart = planOffset + 220;
@@ -114,8 +118,27 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
     decision: "Native Planner started orchestration.",
     agentId: "ARGUS Planner",
     agentRole: "Planner",
-    model: spec.plannerModel
+    model: null
   });
+  if (spec.includeInferredAgentState) {
+    push(260, "AI:GO native execution", {
+      kind: "unknown",
+      state: "running",
+      decision: "Agent state changed to running.",
+      agentId: "ARGUS Solver",
+      agentRole: "Agent state",
+      tokens: { input: null, output: null, reasoning: null, cachedInput: null, normalizedCost: null },
+      durationMs: null,
+      raw: {
+        fixture: true,
+        protocol: "AI:GO native execution",
+        sourceEventType: "squad:agent-state-changed",
+        joinConfidence: "inferred",
+        joinReason: "Agent state is within the execution window, but it has no execution or task ID.",
+        agentState: "running"
+      }
+    });
+  }
   push(planOffset, "AI:GO Planner coordination", {
     kind: "plan.created",
     state: "completed",
@@ -128,8 +151,8 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
       input: share(plannerInput, 0, plannerCallCount),
       output: share(planOutput, 0, plannerCallCount),
       reasoning: 0,
-      cachedInput: share(Math.round(spec.cached * 0.4), 0, plannerCallCount),
-      normalizedCost: spec.cost * 0.25 / plannerCallCount
+      cachedInput: share(Math.round(cached * 0.4), 0, plannerCallCount),
+      normalizedCost: cost * 0.25 / plannerCallCount
     }
   });
 
@@ -143,8 +166,8 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
     const taskFailed = isLast && !nativeCompleted;
     const taskInput = isLast ? solverInput - Math.floor(solverInput / taskTotal) * taskIndex : Math.floor(solverInput / taskTotal);
     const taskOutput = isLast ? solverOutput - Math.floor(solverOutput / taskTotal) * taskIndex : Math.floor(solverOutput / taskTotal);
-    const taskCached = isLast ? Math.round(spec.cached * 0.6) - Math.floor((spec.cached * 0.6) / taskTotal) * taskIndex : Math.floor((spec.cached * 0.6) / taskTotal);
-    const taskCost = isLast ? spec.cost * 0.62 - (spec.cost * 0.62 / taskTotal) * taskIndex : spec.cost * 0.62 / taskTotal;
+    const taskCached = isLast ? Math.round(cached * 0.6) - Math.floor((cached * 0.6) / taskTotal) * taskIndex : Math.floor((cached * 0.6) / taskTotal);
+    const taskCost = isLast ? cost * 0.62 - (cost * 0.62 / taskTotal) * taskIndex : cost * 0.62 / taskTotal;
     const common = {
       taskId,
       taskTitle,
@@ -152,7 +175,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
       dependsOnTaskIds: taskIndex === 0 ? [] : [taskIndex === 1 ? "solve" : `solve-${taskIndex}`],
       agentId: "ARGUS Solver",
       agentRole: "Universal Solver",
-      model: spec.solverModel
+      model: null
     };
 
     push(segmentStart, "AI:GO Planner coordination", {
@@ -161,7 +184,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
       state: "queued",
       agentId: "ARGUS Planner",
       agentRole: "Planner",
-      model: spec.plannerModel,
+      model: taskIndex === 0 ? null : spec.plannerModel,
       decision: `${taskTitle} created in wave ${wave + 1}.`,
       durationMs: taskIndex === 0 ? 0 : Math.min(900, Math.max(360, Math.round(planOffset * 0.65))),
       tokens: taskIndex === 0
@@ -170,8 +193,8 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
             input: share(plannerInput, taskIndex, plannerCallCount),
             output: share(planOutput, taskIndex, plannerCallCount),
             reasoning: 0,
-            cachedInput: share(Math.round(spec.cached * 0.4), taskIndex, plannerCallCount),
-            normalizedCost: spec.cost * 0.25 / plannerCallCount
+            cachedInput: share(Math.round(cached * 0.4), taskIndex, plannerCallCount),
+            normalizedCost: cost * 0.25 / plannerCallCount
           }
     });
     push(segmentStart + 60, "AI:GO Planner coordination", {
@@ -188,6 +211,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
     });
     push(segmentEnd, "AI:GO native task execution", {
       ...common,
+      model: spec.solverModel,
       kind: taskFailed ? "task.failed" : "task.completed",
       state: taskFailed ? (nativeCapped ? "capped" : "failed") : "completed",
       decision: taskFailed
@@ -225,7 +249,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
     agentRole: "Native aggregation",
     durationMs: 530,
     tokens: nativeCompleted
-      ? { input: 0, output: finalOutput, reasoning: 0, cachedInput: 0, normalizedCost: spec.cost * 0.13 }
+      ? { input: 0, output: finalOutput, reasoning: 0, cachedInput: 0, normalizedCost: cost * 0.13 }
       : { input: 0, output: 0, reasoning: 0, cachedInput: 0, normalizedCost: 0 }
   });
   push(terminalOffset, "AI:GO native execution", {
@@ -238,7 +262,21 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
         : "The native run completed and exposed its final result.",
     artifactRef: nativeCompleted ? `artifact://${spec.runId}/final.txt` : null
   });
-  return events;
+  return events.map((event) => ({
+    ...event,
+    durationMs: spec.eventTimingsObserved === false ? null : event.durationMs,
+    tokens: {
+      ...event.tokens,
+      cachedInput: spec.cached == null ? null : event.tokens.cachedInput,
+      normalizedCost: spec.cost == null ? null : event.tokens.normalizedCost
+    },
+    raw: {
+      ...(event.raw ?? {}),
+      sourceEventType: typeof event.raw?.sourceEventType === "string" ? event.raw.sourceEventType : event.kind,
+      joinConfidence: typeof event.raw?.joinConfidence === "string" ? event.raw.joinConfidence : "confirmed",
+      joinReason: typeof event.raw?.joinReason === "string" ? event.raw.joinReason : event.taskId == null ? "Fixture event record" : "Fixture task ID record"
+    }
+  }));
 }
 
 function makeRun(spec: DemoSpec): ArgusRun {
@@ -246,20 +284,54 @@ function makeRun(spec: DemoSpec): ArgusRun {
   const compliant = spec.compliant ?? true;
   const events = makeEvents(spec);
   const modelUsage = [...new Set(events.map((event) => event.model).filter((model): model is string => Boolean(model)))].map((model) => {
-    const calls = events.filter((event) => event.model === model && (event.durationMs > 0 || event.tokens.input + event.tokens.output > 0));
+    const calls = events.filter((event) => event.model === model && ((event.durationMs ?? 0) > 0 || (event.tokens.input ?? 0) + (event.tokens.output ?? 0) > 0));
     return {
       model,
       calls: calls.length,
-      input: calls.reduce((total, event) => total + event.tokens.input, 0),
-      output: calls.reduce((total, event) => total + event.tokens.output, 0),
-      reasoning: calls.reduce((total, event) => total + event.tokens.reasoning, 0),
-      cachedInput: calls.reduce((total, event) => total + event.tokens.cachedInput, 0),
-      normalizedCost: calls.reduce((total, event) => total + event.tokens.normalizedCost, 0),
-      latencyMs: calls.reduce((total, event) => total + event.durationMs, 0),
+      input: calls.reduce((total, event) => total + (event.tokens.input ?? 0), 0),
+      output: calls.reduce((total, event) => total + (event.tokens.output ?? 0), 0),
+      reasoning: calls.reduce((total, event) => total + (event.tokens.reasoning ?? 0), 0),
+      cachedInput: spec.cached == null ? null : calls.reduce((total, event) => total + (event.tokens.cachedInput ?? 0), 0),
+      normalizedCost: spec.cost == null ? null : calls.reduce((total, event) => total + (event.tokens.normalizedCost ?? 0), 0),
+      latencyMs: spec.eventTimingsObserved === false ? null : calls.reduce((total, event) => total + (event.durationMs ?? 0), 0),
       contextWindowTokens: contextWindowFor(model)
     };
   });
   const terminal = events.find((event) => event.kind === "run.completed" || event.kind === "run.failed" || event.kind === "run.capped")!;
+  const taskIds = [...new Set(events.map((event) => event.taskId).filter((taskId): taskId is string => taskId != null))];
+  const tasks = taskIds.map((taskId, taskIndex) => {
+    const taskEvents = events.filter((event) => event.taskId === taskId);
+    const started = taskEvents.find((event) => event.kind === "task.started");
+    const completed = taskEvents.find((event) => event.kind === "task.completed" || event.kind === "task.failed")!;
+    const failed = completed.state === "failed" || completed.state === "capped";
+    return {
+      taskId,
+      title: completed.taskTitle ?? taskId,
+      agentId: completed.agentId ?? null,
+      agentName: completed.agentRole ?? null,
+      status: completed.state,
+      output: failed ? null : taskIndex === taskIds.length - 1 ? spec.finalAnswer : `Intermediate candidate ${taskIndex + 1} recorded.`,
+      error: failed ? spec.failure?.message ?? completed.decision : null,
+      durationMs: completed.durationMs,
+      tokens: { input: completed.tokens.input, output: completed.tokens.output },
+      priority: taskIndex === 0 ? "high" : "normal",
+      description: completed.taskTitle ?? "Execute the planned work item.",
+      createdBy: "ARGUS Planner",
+      dependsOnTaskIds: completed.dependsOnTaskIds ?? [],
+      artifacts: completed.artifactRef == null ? [] : [completed.artifactRef],
+      result: failed ? null : completed.decision,
+      retryCount: failed ? 1 : 0,
+      maxRetries: 2,
+      startedAt: started?.timestamp ?? null,
+      completedAt: completed.timestamp,
+      markdown: `# ${completed.taskTitle ?? taskId}\n\n${completed.decision}`
+    };
+  });
+  const request = spec.track === "coding"
+    ? "Inspect the failing repository behavior and return the smallest contract-valid patch. Preserve unrelated source changes and include only the final patch artifact."
+    : spec.track === "math"
+      ? "Solve the problem carefully, verify the result, and return one contract-valid boxed answer."
+      : "Evaluate the supplied choices and return the single contract-valid answer.";
   return {
     runId: spec.runId,
     portalRunId: `portal-${spec.runId}`,
@@ -285,6 +357,22 @@ function makeRun(spec: DemoSpec): ArgusRun {
       fallbackFree: compliant
     },
     events,
+    detail: {
+      executionId: spec.runId,
+      squadId: `squad-${spec.runId.toLowerCase()}`,
+      squadName: `${spec.track[0]!.toUpperCase()}${spec.track.slice(1)} analysis squad`,
+      request,
+      planTitle: tasks.length === 1 ? tasks[0]!.title : `${tasks.length}-wave ${spec.track} plan`,
+      startedAt: spec.startedAt,
+      completedAt: terminal.timestamp,
+      tasks,
+      console: [
+        { timestamp: at(spec, 180), level: "info", agentId: "ARGUS Planner", message: "Planning started." },
+        ...tasks.map((task) => ({ timestamp: task.completedAt ?? terminal.timestamp, level: task.error == null ? "info" : "error", agentId: task.agentId ?? "AI:GO Runtime", message: task.error ?? `${task.title} completed.` })),
+        { timestamp: terminal.timestamp, level: spec.failure == null ? "info" : "warn", agentId: "AI:GO Runtime", message: terminal.decision }
+      ],
+      reportMarkdown: `# Execution report\n\n- Execution: \`${spec.runId}\`\n- Status: **${status}**\n- Tasks: ${tasks.length}\n- Prompt tokens: ${spec.input}\n- Completion tokens: ${spec.output}\n\n${spec.failure?.message ?? "The execution completed with a recorded result."}`
+    },
     rawEvidenceRefs: [`demo://${spec.runId}/aigo-history.json`, `demo://${spec.runId}/portal-run.json`],
     importedAt: new Date(new Date(terminal.timestamp).valueOf() + 5_200).toISOString()
   };
@@ -342,26 +430,62 @@ const specs: DemoSpec[] = [
     outcome: "capped",
     compliant: false,
     taskCount: 2,
+    includeInferredAgentState: true,
     failure: { itemStatus: "capped_tokens", kind: "token_cap", owner: "policy", secondaryTags: ["PLANNER_ZERO_OR_EXTRA_TASKS"], message: "Run token cap reached before final answer extraction." }
   },
   {
-    runId: "ARGUS-C0-009",
-    startedAt: "2026-08-22T01:24:00.000Z",
+    runId: "ARGUS-C3-044",
+    startedAt: "2026-08-22T01:32:00.000Z",
     track: "generic",
-    itemId: "generic-visible-11",
-    dataset: "MMLU-Pro · law",
-    score: 0,
-    input: 4_420,
-    output: 311,
-    cached: 1_205,
-    cost: 946,
-    latency: 12_900,
+    itemId: "generic-visible-24",
+    dataset: "MMLU-Pro · business",
+    score: 1,
+    input: 28_760,
+    output: 2_340,
+    cached: 9_880,
+    cost: 5_614,
+    latency: 81_600,
     plannerModel: "furiosa-ai/Qwen3-32B-FP8",
     solverModel: "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16",
-    finalAnswer: "The answer is D.",
-    outcome: "extraction_failed",
+    finalAnswer: "ANSWER: B"
+  },
+  {
+    runId: "ARGUS-C4-052",
+    startedAt: "2026-08-22T01:42:00.000Z",
+    track: "coding",
+    itemId: "coding-hidden-17",
+    dataset: "SWE-bench Verified · hidden",
+    score: 0,
+    input: 37_540,
+    output: 3_890,
+    cached: 12_604,
+    cost: 12_480,
+    latency: 96_300,
+    plannerModel: "furiosa-ai/Qwen3-32B-FP8",
+    solverModel: "furiosa-ai/gpt-oss-120b",
+    finalAnswer: null,
+    status: "failed",
+    outcome: "infrastructure_failed",
     compliant: false,
-    failure: { itemStatus: "error", kind: "runner", owner: "team", secondaryTags: ["FORMAT_OPTION_LETTER"], message: "Final output did not match ANSWER: <letter>." }
+    taskCount: 2,
+    failure: { itemStatus: "error", kind: "infrastructure", owner: "organizer", secondaryTags: ["WORKER_RESTART", "ARTIFACT_UNAVAILABLE"], message: "Solver worker restarted before the selected artifact could be persisted." }
+  },
+  {
+    runId: "ARGUS-C5-061",
+    startedAt: "2026-08-22T01:54:00.000Z",
+    track: "math",
+    itemId: "math-private-07",
+    dataset: null,
+    score: null,
+    input: 11_880,
+    output: 1_012,
+    cached: null,
+    cost: null,
+    latency: 28_700,
+    plannerModel: "furiosa-ai/Qwen3-32B-FP8",
+    solverModel: "furiosa-ai/gpt-oss-120b",
+    finalAnswer: "\\boxed{42}",
+    eventTimingsObserved: false
   }
 ];
 
