@@ -20,9 +20,14 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@unovis/react": "^1.6.7",
+    "@unovis/ts": "^1.6.7",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "echarts": "^6.1.0",
+    "echarts-gl": "^2.1.0",
     "lucide-react": "^0.468.0",
+    "motion": "^13.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

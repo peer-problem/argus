@@ -12,7 +12,7 @@ export function Inspector({ event }: { event: ArgusEvent | null }) {
     <aside className="inspector" aria-label="Event inspector">
       <Tabs.Root className="inspector-tabs" value={mode} onValueChange={(next) => setMode(next as "fields" | "source")}>
         <div className="inspector-head">
-          <div><p className="eyebrow">Event evidence</p><h2>{event.kind.replace(".", " / ")}</h2></div>
+          <h2>Event · {event.kind.replace(".", " / ")}</h2>
           <Tabs.List className="ui-tabs-list" aria-label="Evidence representation">
             <Tabs.Tab className="ui-tab" value="fields">Fields</Tabs.Tab>
             <Tabs.Tab className="ui-tab" value="source">Source</Tabs.Tab>

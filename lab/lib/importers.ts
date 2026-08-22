@@ -38,6 +38,11 @@ function number(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function nullableNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  return number(value);
+}
+
 function pick(source: UnknownRecord, ...keys: string[]): unknown {
   for (const key of keys) if (source[key] !== undefined && source[key] !== null) return source[key];
   return undefined;
@@ -122,7 +127,8 @@ function usageFrom(value: unknown, runKind: "test" | "submission" = "test", fall
     reasoning,
     cachedInput,
     normalizedCost: number(pick(source, "normalized_cost", "normalizedCost"), inferredCost),
-    latencyMs: number(pick(source, "latency_ms", "latencyMs", "duration_ms", "durationMs"))
+    latencyMs: number(pick(source, "latency_ms", "latencyMs", "duration_ms", "durationMs")),
+    contextWindowTokens: nullableNumber(pick(source, "context_window_tokens", "contextWindowTokens", "context_length", "contextLength"))
   };
 }
 

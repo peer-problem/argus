@@ -84,7 +84,8 @@
           "reasoning": { "type": "number", "minimum": 0 },
           "cachedInput": { "type": "number", "minimum": 0 },
           "normalizedCost": { "type": "number", "minimum": 0 },
-          "latencyMs": { "type": "number", "minimum": 0 }
+          "latencyMs": { "type": "number", "minimum": 0 },
+          "contextWindowTokens": { "type": ["number", "null"], "minimum": 0 }
         }
       }
     },

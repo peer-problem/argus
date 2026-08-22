@@ -2,6 +2,18 @@ import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusEvidenceRecord, Argus
 
 const hash = (letter: string) => letter.repeat(64);
 
+function contextWindowFor(model: string): number | null {
+  if (model.includes("K-EXAONE-236B")) return 48_000;
+  if (model.includes("gpt-oss-120b")) return 128_000;
+  if (model.includes("Qwen3-32B")) return 40_000;
+  return null;
+}
+
+function share(total: number, index: number, count: number): number {
+  const base = Math.floor(total / count);
+  return index === count - 1 ? total - base * index : base;
+}
+
 interface DemoSpec {
   runId: string;
   startedAt: string;
@@ -51,6 +63,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
   const events: ArgusEvent[] = [];
   const { finalOutput, planOutput, plannerInput, solverInput, solverOutput } = splitUsage(spec);
   const taskTotal = spec.taskCount ?? 1;
+  const plannerCallCount = Math.max(1, taskTotal);
   const nativeCapped = spec.status === "capped";
   const nativeFailed = spec.outcome === "infrastructure_failed";
   const nativeCompleted = !nativeCapped && !nativeFailed;
@@ -72,7 +85,7 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
       taskTitle: null,
       dependsOnTaskIds: [],
       agentId: "AI:GO Runtime",
-      agentRole: "Native runtime",
+      agentRole: "AI:GO Native Runtime",
       model: null,
       kind: "unknown",
       state: "running",
@@ -112,11 +125,11 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
     model: spec.plannerModel,
     durationMs: planOffset - 180,
     tokens: {
-      input: plannerInput,
-      output: planOutput,
+      input: share(plannerInput, 0, plannerCallCount),
+      output: share(planOutput, 0, plannerCallCount),
       reasoning: 0,
-      cachedInput: Math.round(spec.cached * 0.4),
-      normalizedCost: spec.cost * 0.25
+      cachedInput: share(Math.round(spec.cached * 0.4), 0, plannerCallCount),
+      normalizedCost: spec.cost * 0.25 / plannerCallCount
     }
   });
 
@@ -149,7 +162,17 @@ function makeEvents(spec: DemoSpec): ArgusEvent[] {
       agentId: "ARGUS Planner",
       agentRole: "Planner",
       model: spec.plannerModel,
-      decision: `${taskTitle} created in wave ${wave + 1}.`
+      decision: `${taskTitle} created in wave ${wave + 1}.`,
+      durationMs: taskIndex === 0 ? 0 : Math.min(900, Math.max(360, Math.round(planOffset * 0.65))),
+      tokens: taskIndex === 0
+        ? { input: 0, output: 0, reasoning: 0, cachedInput: 0, normalizedCost: 0 }
+        : {
+            input: share(plannerInput, taskIndex, plannerCallCount),
+            output: share(planOutput, taskIndex, plannerCallCount),
+            reasoning: 0,
+            cachedInput: share(Math.round(spec.cached * 0.4), taskIndex, plannerCallCount),
+            normalizedCost: spec.cost * 0.25 / plannerCallCount
+          }
     });
     push(segmentStart + 60, "AI:GO Planner coordination", {
       ...common,
@@ -222,12 +245,20 @@ function makeRun(spec: DemoSpec): ArgusRun {
   const status = spec.status ?? "completed";
   const compliant = spec.compliant ?? true;
   const events = makeEvents(spec);
-  const { plannerInput, plannerOutput, solverInput, solverOutput } = splitUsage(spec);
-  const plannerUsage = { model: spec.plannerModel, calls: 1, input: plannerInput, output: plannerOutput, reasoning: 0, cachedInput: Math.round(spec.cached * 0.4), normalizedCost: spec.cost * 0.38, latencyMs: Math.round(spec.latency * 0.28) };
-  const solverUsage = { model: spec.solverModel, calls: spec.taskCount ?? 1, input: solverInput, output: solverOutput, reasoning: 0, cachedInput: Math.round(spec.cached * 0.6), normalizedCost: spec.cost * 0.62, latencyMs: Math.round(spec.latency * 0.72) };
-  const modelUsage = spec.plannerModel === spec.solverModel
-    ? [{ ...plannerUsage, calls: 1 + (spec.taskCount ?? 1), input: spec.input, output: spec.output, cachedInput: spec.cached, normalizedCost: spec.cost, latencyMs: spec.latency }]
-    : [plannerUsage, solverUsage];
+  const modelUsage = [...new Set(events.map((event) => event.model).filter((model): model is string => Boolean(model)))].map((model) => {
+    const calls = events.filter((event) => event.model === model && (event.durationMs > 0 || event.tokens.input + event.tokens.output > 0));
+    return {
+      model,
+      calls: calls.length,
+      input: calls.reduce((total, event) => total + event.tokens.input, 0),
+      output: calls.reduce((total, event) => total + event.tokens.output, 0),
+      reasoning: calls.reduce((total, event) => total + event.tokens.reasoning, 0),
+      cachedInput: calls.reduce((total, event) => total + event.tokens.cachedInput, 0),
+      normalizedCost: calls.reduce((total, event) => total + event.tokens.normalizedCost, 0),
+      latencyMs: calls.reduce((total, event) => total + event.durationMs, 0),
+      contextWindowTokens: contextWindowFor(model)
+    };
+  });
   const terminal = events.find((event) => event.kind === "run.completed" || event.kind === "run.failed" || event.kind === "run.capped")!;
   return {
     runId: spec.runId,
