@@ -1,6 +1,6 @@
 import { Button } from "@base-ui/react/button";
 import { Check, CircleDot, Radar, Route, TerminalSquare, TriangleAlert } from "lucide-react";
-import type { ArgusEvent, ArgusRun } from "../../../../lab/lib/types.ts";
+import type { ArgusEvent, ArgusRun } from "../types.ts";
 import { dependencyWaveCount, taskCount } from "../derive.ts";
 
 interface TaskGraphProps {
@@ -68,7 +68,7 @@ export function TaskGraph({ run, events, onSelect, agentFilter = "all", modelFil
             >
               <span className="node-index">0{index + 1}</span>
               <span className="node-icon"><Icon size={17} strokeWidth={1.7} /></span>
-              <span className="node-copy"><strong>{label}</strong><small>{key === "task" ? "ARGUS Solver" : "ARGUS Planner"}</small></span>
+              <span className="node-copy"><strong>{label}</strong><small>{source?.agentRole ?? source?.agentId ?? "System"}</small></span>
               <span className="node-state">{failed ? <TriangleAlert size={14} /> : visible ? <Check size={14} /> : null}</span>
             </Button>
           );

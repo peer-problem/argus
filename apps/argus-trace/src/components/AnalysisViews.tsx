@@ -1,21 +1,7 @@
 import { AlertTriangle, Check, CircleAlert, Gauge, ShieldCheck, X } from "lucide-react";
-import type { ArgusRun } from "../../../../lab/lib/types.ts";
+import type { ArgusRun } from "../types.ts";
 import { cacheShare, capShare, comparisonIsMatched, complianceScore, failureCounts, formatDuration, formatNumber } from "../derive.ts";
 import { PeerProgress, PeerSelect } from "./peer/PeerControls.tsx";
-
-const virtualKernelStages = [
-  ["Normalize", "Objective, constraints, evidence, contract"],
-  ["Solve", "One primary candidate from supplied context"],
-  ["Assert", "Track invariants checked against the input"],
-  ["Repair", "At most one revision after a failed assertion"],
-  ["Emit", "Only the contract-compliant artifact"]
-] as const;
-
-const contextEnvelopes = [
-  ["Qwen3-32B", "Thin Planner", "40K", "Fast control route"],
-  ["GPT-OSS-120B", "Universal Solver", "128K", "Context-safe v1 route"],
-  ["K-EXAONE 236B", "Calibration only", "48K", "Not on baseline path"]
-] as const;
 
 export function TokenFlow({ run, modelFilter = "all" }: { run: ArgusRun; modelFilter?: string }) {
   const total = Math.max(1, run.totals.input + run.totals.output);
@@ -153,14 +139,9 @@ export function FailuresView({ runs }: { runs: ArgusRun[] }) {
   );
 }
 
-const complianceLabels: Record<keyof ArgusRun["compliance"], [string, string]> = {
-  userToolsZero: ["User tools", "No built-in, custom, or MCP tools attached"],
-  plannerNativeProtocol: ["Native protocol", "Planner coordination remained inside AI:GO"],
-  memoryOff: ["Memory", "No previous conversation context injected"],
-  hashesPresent: ["Artifact hashes", "Dataset, Squad, submission, and prompt identified"],
-  outputContract: ["Output contract", "Final artifact passed track extraction"],
-  fallbackFree: ["Fallback", "No planner failure or roster fan-out signature"]
-};
+function displayKey(key: string): string {
+  return key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
 
 export function ComplianceView({ run }: { run: ArgusRun }) {
   const score = complianceScore(run);
@@ -168,29 +149,7 @@ export function ComplianceView({ run }: { run: ArgusRun }) {
     <div className="analysis-page">
       <header className="page-title"><div><p className="eyebrow">Runtime boundary</p><h1>Compliance panel</h1><p>Observable evidence only—unknown is never promoted to passed.</p></div><div className="compliance-total"><ShieldCheck size={21} /><strong>{score.passed}/{score.total}</strong><span>checks passed</span></div></header>
       {run.source === "demo" && <div className="demo-warning"><AlertTriangle size={17} /><p><strong>Demonstration data.</strong> This UI fixture proves rendering and interaction, not a live AI:GO gate.</p></div>}
-      <section className="kernel-contract" aria-labelledby="kernel-contract-title">
-        <div className="section-heading"><div><p className="eyebrow">Configured v1 contract</p><h2 id="kernel-contract-title">ARGUS Virtual Kernel</h2></div><span className="section-note">protocol contract · not a hidden-reasoning trace</span></div>
-        <div className="kernel-topology" aria-label="Virtual Kernel agent topology">
-          <div><span>Control plane</span><strong>Thin Planner</strong><small>one native task · verbatim gate</small></div>
-          <b aria-hidden="true">→</b>
-          <div><span>Execution subject</span><strong>Universal Solver</strong><small>one internal verification loop</small></div>
-        </div>
-        <ol className="answer-extraction" aria-label="Native judged answer selection order">
-          <li><span>01</span><div><strong>Aggregated result</strong><small>judge checks the native aggregate first</small></div></li>
-          <li><span>02</span><div><strong>Last-wave task outputs</strong><small>read backwards as the native fallback</small></div></li>
-          <li><span>03</span><div><strong>Status summary refused</strong><small>execution-complete text is never accepted as the answer</small></div></li>
-        </ol>
-        <ol className="kernel-stages">{virtualKernelStages.map(([label, note], index) => <li key={label}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{label}</strong><small>{note}</small></div></li>)}</ol>
-        <p className="kernel-boundary-note"><CircleAlert size={16} /><span>The interface shows the configured method and observable contract evidence. It never claims access to private chain-of-thought or fabricated per-stage runtime events.</span></p>
-      </section>
-      <section className="context-envelope" aria-labelledby="context-envelope-title">
-        <div className="section-heading"><div><p className="eyebrow">Context routing</p><h2 id="context-envelope-title">Model envelopes</h2></div><span className="section-note">input + output limit</span></div>
-        <div className="context-table-wrap"><table><thead><tr><th>Model</th><th>v1 role</th><th>Context</th><th>Decision</th></tr></thead><tbody>{contextEnvelopes.map(([model, role, context, decision]) => <tr key={model}><th scope="row">{model}</th><td>{role}</td><td><code>{context}</code></td><td>{decision}</td></tr>)}</tbody></table></div>
-        <p className="transport-boundary"><strong>65,536-byte direct guard</strong><span>acts before model inference on the installed surface; an in-Squad pager cannot repair a request rejected before the Planner receives it.</span></p>
-        <p className="transport-boundary"><strong>Event runtime cap</strong><span>is authoritative. Portal Check confirmed agent max-token and iteration settings do not reach evaluation; the 12,288 output reserve is local preflight only.</span></p>
-        <p className="pager-readiness"><strong>Context Pager</strong><span><b>Experimental only.</b> The Qwen Planner must first receive the complete request inside its 40K envelope, and native lossless sequential delivery remains unverified.</span></p>
-      </section>
-      <section className="compliance-list">{(Object.entries(run.compliance) as Array<[keyof ArgusRun["compliance"], boolean | null]>).map(([key, value]) => { const [label, note] = complianceLabels[key]; return <div key={key} className={value === true ? "pass" : value === false ? "fail" : "unknown"}><span className="check-icon">{value === true ? <Check size={16} /> : value === false ? <X size={16} /> : <CircleAlert size={16} />}</span><div><strong>{label}</strong><small>{note}</small></div><b>{value === true ? "Passed" : value === false ? "Failed" : "Unknown"}</b></div>; })}</section>
+      <section className="compliance-list">{Object.entries(run.compliance).map(([key, value]) => <div key={key} className={value === true ? "pass" : value === false ? "fail" : "unknown"}><span className="check-icon">{value === true ? <Check size={16} /> : value === false ? <X size={16} /> : <CircleAlert size={16} />}</span><div><strong>{displayKey(key)}</strong><small>Reported by the imported run evidence</small></div><b>{value === true ? "Passed" : value === false ? "Failed" : "Unknown"}</b></div>)}</section>
       <section className="hash-list"><div className="section-heading"><div><p className="eyebrow">Reproducibility</p><h2>Artifact identity</h2></div></div>{Object.entries(run.hashes).map(([key, value]) => <div key={key}><span>{key}</span><code>{value ?? "not recorded"}</code></div>)}</section>
     </div>
   );

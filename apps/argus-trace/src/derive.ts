@@ -1,4 +1,4 @@
-import type { ArgusEvent, ArgusRun } from "../../../lab/lib/types.ts";
+import type { ArgusEvent, ArgusRun } from "./types.ts";
 
 export function formatNumber(value: number, maximumFractionDigits = 1): string {
   return new Intl.NumberFormat("en-US", { notation: value >= 100_000 ? "compact" : "standard", maximumFractionDigits }).format(value);

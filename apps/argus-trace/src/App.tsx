@@ -4,7 +4,7 @@ import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
 import { Activity, Binary, CheckCircle2, ChevronRight, CircleGauge, GitCompareArrows, Import, Radar, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ArgusEvent, ArgusRun } from "../../../lab/lib/types.ts";
+import type { ArgusEvent, ArgusRun } from "./types.ts";
 import { CapView, CompareView, ComplianceView, FailuresView, Provenance, TokenFlow } from "./components/AnalysisViews.tsx";
 import { Inspector } from "./components/Inspector.tsx";
 import { PeerButton, PeerSelect, PeerToastViewport } from "./components/peer/PeerControls.tsx";
@@ -126,7 +126,7 @@ function AppContent() {
     try {
       const parsed: unknown = JSON.parse(await file.text());
       const incoming = Array.isArray(parsed) ? parsed : [parsed];
-      if (!incoming.every(isArgusRun)) throw new Error("Use normalized ARGUS run JSON. Run the Lab importer on raw exports first.");
+      if (!incoming.every(isArgusRun)) throw new Error("Use normalized ARGUS run JSON containing events, totals, and compliance data.");
       const first = incoming[0]!;
       setRuns((current) => [...incoming, ...current.filter((existing) => !incoming.some((candidate) => candidate.runId === existing.runId))]);
       setSelectedRunId(first.runId);

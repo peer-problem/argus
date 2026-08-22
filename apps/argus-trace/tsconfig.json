@@ -19,5 +19,5 @@
     "allowImportingTsExtensions": true,
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "../../lab/lib/types.ts"]
+  "include": ["src"]
 }
