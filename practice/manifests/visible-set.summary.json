@@ -1,0 +1,12 @@
+{
+  "source": "JunctionX Lablup practice archive",
+  "archiveSha256": "d676fc90bc7704708fd9cf600e75b40f327a9f7763502797de159972c0b28062",
+  "capturedAt": "2026-08-22",
+  "total": 121,
+  "tracks": {
+    "coding": { "count": 20, "weight": 0.5, "swebench": 13, "livecodebench": 7 },
+    "math": { "count": 59, "weight": 0.25, "math500": 48, "aime2024": 11 },
+    "generic": { "count": 42, "weight": 0.25, "subjects": 14 }
+  },
+  "largestVisibleRequestBytes": 70310
+}
