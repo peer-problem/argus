@@ -42,7 +42,7 @@ describe("Squad compliance", () => {
     const report = auditCandidate(candidate);
     expect(report.candidateValid).toBe(true);
     expect(report.freezeReady).toBe(false);
-    expect(report.gatesPassed).toBe(3);
+    expect(report.gatesPassed).toBe(2);
   });
 
   it("verifies failed and unverified evidence hashes instead of trusting status", () => {
