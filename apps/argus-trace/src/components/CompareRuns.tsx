@@ -398,7 +398,7 @@ function SelectedRunStats({ report }: { report: PortalBatchRunReport }) {
 export function CompareRuns({ reports, selectedId, onSelectedIdChange }: { reports: PortalBatchRunReport[]; selectedId: string; onSelectedIdChange: (reportId: string) => void }) {
   const selected = reports.find((report) => report.reportId === selectedId) ?? reports[0];
 
-  if (!selected) return <div className="compare-empty"><Box size={20} /><p>No Portal Run report is loaded.</p></div>;
+  if (!selected) return <div className="compare-empty"><Box size={20} /><p>No comparison Run report is loaded.</p></div>;
 
   return (
     <div className="analysis-page compare-runs-page">
