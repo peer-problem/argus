@@ -104,6 +104,50 @@ export interface ArgusRun {
   importedAt: string;
 }
 
+export type ArgusEvidenceSource = "aigo" | "portal" | "argus";
+
+export interface ArgusEvidenceRecord {
+  evidenceId: string;
+  source: ArgusEvidenceSource;
+  protocol: string;
+  emittedAt?: string | null;
+  receivedAt: string;
+  fields: string[];
+  reference: string;
+}
+
+export interface ArgusEvidenceLink {
+  linkId: string;
+  fromEvidenceId: string;
+  toEvidenceId: string;
+  relation: "same_evaluated_item" | "same_execution" | "derived_view";
+  linkedAt: string;
+}
+
+export interface ArgusBatchSettings {
+  maxConcurrentTasks: number | null;
+  maxTasks: number | null;
+  taskTimeoutSeconds: number | null;
+  directRequestByteLimit: number | null;
+}
+
+export interface ArgusBatchItem {
+  itemKey: string;
+  trace: ArgusRun;
+  evidence: ArgusEvidenceRecord[];
+  links: ArgusEvidenceLink[];
+}
+
+export interface ArgusBatch {
+  batchId: string;
+  name: string;
+  source: "demo" | "imported";
+  settings: ArgusBatchSettings;
+  items: ArgusBatchItem[];
+  createdAt: string;
+  completedAt: string | null;
+}
+
 export interface ArgusExperiment {
   runId: string;
   candidateId?: string;
