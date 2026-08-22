@@ -12,7 +12,7 @@ interface TaskGraphProps {
 }
 
 const stages = [
-  { key: "plan", label: "Plan", kinds: ["run.started", "plan.created"], Icon: Radar },
+  { key: "plan", label: "Plan", kinds: ["run.created", "run.started", "plan.created"], Icon: Radar },
   { key: "task", label: "Solve", kinds: ["task.created", "task.assigned", "task.started", "task.completed", "task.failed"], Icon: Route },
   { key: "aggregate", label: "Aggregate", kinds: ["aggregation.started", "aggregation.completed"], Icon: CircleDot },
   { key: "final", label: "Final", kinds: ["run.completed", "run.failed", "run.capped"], Icon: TerminalSquare }

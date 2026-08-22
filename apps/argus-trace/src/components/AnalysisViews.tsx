@@ -1,7 +1,8 @@
 import { AlertTriangle, Check, CircleAlert, Gauge, ShieldCheck, X } from "lucide-react";
-import type { ArgusRun } from "../types.ts";
+import type { ArgusBatchItem, ArgusRun } from "../types.ts";
 import { cacheShare, capShare, comparisonIsMatched, complianceScore, failureCounts, formatDuration, formatNumber } from "../derive.ts";
-import { PeerProgress, PeerSelect } from "./peer/PeerControls.tsx";
+import { dataArrivalsFor } from "../data/demo.ts";
+import { UiProgress, UiSelect } from "./ui/Controls.tsx";
 
 export function TokenFlow({ run, modelFilter = "all" }: { run: ArgusRun; modelFilter?: string }) {
   const total = Math.max(1, run.totals.input + run.totals.output);
@@ -23,36 +24,32 @@ export function TokenFlow({ run, modelFilter = "all" }: { run: ArgusRun; modelFi
   );
 }
 
-export function Provenance({ run }: { run: ArgusRun }) {
-  const taskResult = [...run.events].reverse().find((event) => event.kind === "task.completed" || event.kind === "task.failed");
-  const finalState = run.compliance.outputContract === true
-    ? "contract-valid artifact"
-    : run.compliance.outputContract === false
-      ? "observed output · contract invalid"
-      : run.finalAnswer
-        ? "observed output · not graded"
-        : "not observed";
-  const candidateState = taskResult?.candidateStatus === "selected"
-    ? "selected"
-    : taskResult
-      ? taskResult.state === "failed" || taskResult.state === "capped" ? "task failed" : "observed task result"
-      : "not observed";
-  const aggregationState = run.compliance.outputContract === true
-    ? "verbatim gate passed"
-    : run.compliance.outputContract === false
-      ? "contract failed"
-      : "not evidenced";
-  const steps = [
-    ["Request", run.itemId ?? "unknown item"],
-    ["Task", taskResult ? `${taskResult.taskTitle ?? taskResult.taskId ?? "solve"} · wave ${String((taskResult.wave ?? 0) + 1).padStart(2, "0")}` : "not observed"],
-    ["Candidate", candidateState],
-    ["Aggregation", aggregationState],
-    ["Final", finalState]
-  ];
+function formatRecordedAt(recordedAt: string, startedAt?: string) {
+  const end = new Date(recordedAt).toISOString();
+  return startedAt ? `${new Date(startedAt).toISOString()} → ${end}` : end;
+}
+
+export function DataArrivalFlow({ item, loadedAt }: { item: ArgusBatchItem; loadedAt: string }) {
+  const arrivals = dataArrivalsFor(item, loadedAt);
+  const run = item.trace;
   return (
-    <section className="analysis-section provenance" aria-labelledby="provenance-title">
-      <div className="section-heading"><div><p className="eyebrow">Lineage</p><h2 id="provenance-title">Answer provenance</h2></div></div>
-      <ol>{steps.map(([label, value], index) => <li key={label} className={run.status !== "completed" && index > 2 ? "muted" : ""}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{label}</strong><small>{value}</small></div></li>)}</ol>
+    <section className="analysis-section data-arrival" aria-labelledby="data-arrival-title">
+      <div className="section-heading">
+        <div><p className="eyebrow">Recorded delivery</p><h2 id="data-arrival-title">Data arrival</h2></div>
+        <span className="section-note">{run.source === "demo" ? "separate fixture records · not live transport" : "source records · local replay"}</span>
+      </div>
+      <ol>{arrivals.map((arrival, index) => (
+        <li key={arrival.id}>
+          <span className="arrival-index">{String(index + 1).padStart(2, "0")}</span>
+          <div className="arrival-copy">
+            <strong>{arrival.protocol}</strong>
+            <small>{arrival.source} <span aria-hidden="true">→</span> {arrival.receiver}</small>
+            <time dateTime={arrival.recordedAt}>{formatRecordedAt(arrival.recordedAt, arrival.startedAt)}</time>
+            <p>{arrival.data}</p>
+            {arrival.reference && <code>{arrival.reference}</code>}
+          </div>
+        </li>
+      ))}</ol>
     </section>
   );
 }
@@ -72,7 +69,7 @@ export function CompareView({ runs, primary, secondaryId, onSecondary }: { runs:
   ];
   return (
     <div className="analysis-page">
-      <header className="page-title"><div><p className="eyebrow">Candidate evidence</p><h1>Compare runs</h1><p>Accuracy first; cost and wall-clock break ties.</p></div><PeerSelect className="compare-picker" label="Compare with" value={secondary.runId} onValueChange={onSecondary} options={runs.filter((run) => run.runId !== primary.runId).map((run) => ({ value: run.runId, label: run.runId }))} /></header>
+      <header className="page-title"><div><p className="eyebrow">Candidate evidence</p><h1>Compare runs</h1><p>Accuracy first; cost and wall-clock break ties.</p></div><UiSelect className="compare-picker" label="Compare with" value={secondary.runId} onValueChange={onSecondary} options={runs.filter((run) => run.runId !== primary.runId).map((run) => ({ value: run.runId, label: run.runId }))} /></header>
       <div className="compare-grid">
         <section className="pareto-panel">
           <div className="section-heading"><div><p className="eyebrow">Pareto field</p><h2>Accuracy × cost</h2></div><span className="section-note">scored runs only · circle size = latency</span></div>
@@ -121,7 +118,7 @@ export function CapView({ runs, run }: { runs: ArgusRun[]; run: ArgusRun }) {
         </svg>}
         <div className="cap-summary"><div><span>Run cap</span><strong>{run.caps.runTokens ? formatNumber(run.caps.runTokens, 0) : "Unknown"}</strong></div><div><span>Observed</span><strong>{formatNumber(run.caps.usedTokens, 0)}</strong></div><div><span>Safe ceiling</span><strong>{run.caps.runTokens ? formatNumber(run.caps.runTokens * .85, 0) : "Unknown"}</strong></div><div><span>Wall-clock</span><strong>{formatDuration(run.caps.elapsedMs)}</strong></div></div>
       </section>
-      <section className="run-burn-list"><div className="section-heading"><div><p className="eyebrow">All loaded runs</p><h2>Risk scan</h2></div></div>{runs.map((item) => { const itemShare = capShare(item); const percent = itemShare == null ? null : Math.min(100, itemShare * 100); return <div key={item.runId} className={itemShare == null ? "is-unverified" : ""}><span className={`track-mark track-${item.track}`} aria-hidden="true" /><strong>{item.runId}</strong><span>{item.track}</span><PeerProgress label={`${item.runId} token cap usage`} value={percent} tone={percent != null && percent > 85 ? "danger" : itemShare == null ? "muted" : "default"} /><b>{itemShare == null ? "unverified" : `${Math.round(itemShare * 100)}%`}</b></div>; })}</section>
+      <section className="run-burn-list"><div className="section-heading"><div><p className="eyebrow">All loaded runs</p><h2>Risk scan</h2></div></div>{runs.map((item) => { const itemShare = capShare(item); const percent = itemShare == null ? null : Math.min(100, itemShare * 100); return <div key={item.runId} className={itemShare == null ? "is-unverified" : ""}><span className={`track-mark track-${item.track}`} aria-hidden="true" /><strong>{item.runId}</strong><span>{item.track}</span><UiProgress label={`${item.runId} token cap usage`} value={percent} tone={percent != null && percent > 85 ? "danger" : itemShare == null ? "muted" : "default"} /><b>{itemShare == null ? "unverified" : `${Math.round(itemShare * 100)}%`}</b></div>; })}</section>
     </div>
   );
 }
@@ -133,7 +130,7 @@ export function FailuresView({ runs }: { runs: ArgusRun[] }) {
   return (
     <div className="analysis-page">
       <header className="page-title"><div><p className="eyebrow">Diagnosis</p><h1>Failure ownership</h1><p>Portal enums remain primary truth; ARGUS tags add a narrower diagnostic.</p></div></header>
-      <section className="ownership-chart"><div className="section-heading"><div><p className="eyebrow">Loaded evidence</p><h2>Failures by owner</h2></div></div>{owners.map((owner) => <div key={owner}><span>{owner}</span><PeerProgress label={`${owner} failures`} value={counts[owner] ?? 0} max={max} /><strong>{counts[owner] ?? 0}</strong></div>)}</section>
+      <section className="ownership-chart"><div className="section-heading"><div><p className="eyebrow">Loaded evidence</p><h2>Failures by owner</h2></div></div>{owners.map((owner) => <div key={owner}><span>{owner}</span><UiProgress label={`${owner} failures`} value={counts[owner] ?? 0} max={max} /><strong>{counts[owner] ?? 0}</strong></div>)}</section>
       <section className="failure-list"><div className="failure-list-head"><span>Run</span><span>Portal outcome</span><span>Owner</span><span>Secondary diagnosis</span></div>{runs.filter((run) => run.failure).map((run) => <div key={run.runId}><strong><span className={`track-mark track-${run.track}`} aria-hidden="true" />{run.runId}</strong><span>{run.outcome.replaceAll("_", " ")}</span><span className={`owner owner-${run.failure!.owner}`}>{run.failure!.owner}</span><div><span>{run.failure!.message || "Failure metadata observed without a message."}</span><small>{run.failure!.secondaryTags.join(" · ") || "No secondary tag"}</small></div></div>)}{!runs.some((run) => run.failure) && <div className="failure-empty">No failure evidence is loaded.</div>}</section>
     </div>
   );
