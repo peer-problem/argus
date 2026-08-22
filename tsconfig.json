@@ -1,7 +1,6 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.lab.json" },
     { "path": "./apps/argus-trace/tsconfig.json" }
   ]
 }
