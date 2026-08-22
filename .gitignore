@@ -1,0 +1,23 @@
+docs/
+.agents/
+.clone/
+node_modules/
+dist/
+coverage/
+.DS_Store
+*.tsbuildinfo
+.playwright-cli/
+output/playwright/
+
+# Live AI:GO and portal exports may contain credentials or private run data.
+artifacts/aigo-workspace/*
+!artifacts/aigo-workspace/.gitkeep
+artifacts/exports/*
+!artifacts/exports/.gitkeep
+artifacts/runs/*
+!artifacts/runs/.gitkeep
+
+# Frozen artifacts are written only by the evidence-backed freeze command.
+configs/frozen/*.json
+configs/frozen/*.sha256
+!configs/frozen/README.md
