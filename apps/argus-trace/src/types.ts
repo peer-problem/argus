@@ -176,7 +176,7 @@ export interface ArgusBatchItem {
 export interface ArgusBatch {
   batchId: string;
   name: string;
-  source: "demo" | "imported";
+  source: "demo" | "imported" | "bundled";
   settings: ArgusBatchSettings;
   items: ArgusBatchItem[];
   createdAt: string;

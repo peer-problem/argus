@@ -10,8 +10,9 @@ import { ExecutionTrace } from "./components/ExecutionTrace.tsx";
 import { Inspector } from "./components/Inspector.tsx";
 import { RunResultDetails } from "./components/RunResultDetails.tsx";
 import { UiButton, UiIconButton, UiToastViewport } from "./components/ui/Controls.tsx";
+import { capturedPortalBatch, capturedPortalRuns } from "./data/capturedPortalRuns.ts";
 import { demoBatches, demoRuns, makeImportedBatch } from "./data/demo.ts";
-import { capturedPortalReports } from "./data/portalReports.ts";
+import { capturedPortalReports, demoLinkedPortalReports } from "./data/portalReports.ts";
 import { capShare, formatDuration, formatNumber, taskCount, traceCallSpans, visibleTraceCallEvents } from "./derive.ts";
 
 type View = "details" | "compare";
@@ -42,7 +43,18 @@ function runClock(run: ArgusRun): string {
   return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(runTimestamp(run));
 }
 
-const initialDemoRun = [...demoRuns].sort((a, b) => runTimestamp(b) - runTimestamp(a))[0]!;
+const comparisonReports = capturedPortalReports;
+const demoReportIdByRunId = new Map([...demoRuns]
+  .sort((a, b) => runTimestamp(b) - runTimestamp(a))
+  .map((run, index) => [run.runId, demoLinkedPortalReports[index]?.reportId]));
+const initialPortalRun = capturedPortalRuns[0]!;
+
+function linkedComparisonReport(run: ArgusRun) {
+  const direct = run.portalRunId == null ? undefined : comparisonReports.find((report) => report.reportId === run.portalRunId);
+  if (direct) return direct;
+  const demoReportId = run.source === "demo" ? demoReportIdByRunId.get(run.runId) : undefined;
+  return demoReportId == null ? undefined : comparisonReports.find((report) => report.reportId === demoReportId);
+}
 
 function conciseRunWarning(run: ArgusRun): string | null {
   if (run.failure?.message) return run.failure.message;
@@ -85,7 +97,7 @@ function RunLimits({ batch, item }: { batch: ArgusBatch; item: ArgusBatchItem })
     ["Concurrency", settingLabel(batch.settings.maxConcurrentTasks), "maximum"],
     ["Task timeout", settingLabel(batch.settings.taskTimeoutSeconds, " s"), "configured"],
     ["Request limit", settingLabel(batch.settings.directRequestByteLimit, " B"), "direct request"],
-    ["Imported runs", `${batch.items.length}`, "same evidence set"]
+    ["Batch runs", `${batch.items.length}`, "same evidence set"]
   ];
   return (
     <section className="run-limits" aria-labelledby="run-limits-title">
@@ -141,26 +153,25 @@ function AppContent() {
   const initialLoadedAt = useRef(new Date().toISOString());
   const [importedBatches, setImportedBatches] = useState<ArgusBatch[]>([]);
   const [includeMockData, setIncludeMockData] = useState(true);
-  const batches = useMemo(() => includeMockData ? [...importedBatches, ...demoBatches] : importedBatches, [importedBatches, includeMockData]);
-  const portalReports = capturedPortalReports;
-  const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries(demoRuns.map((item) => [item.runId, initialLoadedAt.current])));
-  const [selectedBatchId, setSelectedBatchId] = useState(demoBatches[0]!.batchId);
-  const [selectedRunId, setSelectedRunId] = useState(initialDemoRun.runId);
-  const [selectedCompareReportId, setSelectedCompareReportId] = useState(capturedPortalReports[0]?.reportId ?? "");
+  const batches = useMemo(() => includeMockData ? [...importedBatches, capturedPortalBatch, ...demoBatches] : [...importedBatches, capturedPortalBatch], [importedBatches, includeMockData]);
+  const portalReports = comparisonReports;
+  const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries([...capturedPortalRuns, ...demoRuns].map((item) => [item.runId, initialLoadedAt.current])));
+  const [selectedBatchId, setSelectedBatchId] = useState(capturedPortalBatch.batchId);
+  const [selectedRunId, setSelectedRunId] = useState(initialPortalRun.runId);
+  const [selectedCompareReportId, setSelectedCompareReportId] = useState(initialPortalRun.portalRunId ?? "");
   const [view, setView] = useState<View>("compare");
   const [progress, setProgress] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(traceCallSpans(initialDemoRun).at(-1)?.event.eventId ?? null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(traceCallSpans(initialPortalRun).at(-1)?.event.eventId ?? null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const toastManager = Toast.useToastManager();
   const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0] ?? null;
   const item = batch?.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch?.items[0] ?? null;
-  const run = item?.trace ?? initialDemoRun;
+  const run = item?.trace ?? initialPortalRun;
   const latestItems = useMemo(() => batches.flatMap((candidateBatch) => candidateBatch.items.map((candidateItem) => ({ batch: candidateBatch, item: candidateItem }))).sort((a, b) => runTimestamp(b.item.trace) - runTimestamp(a.item.trace)), [batches]);
-  const compareSelectionIndex = portalReports.findIndex((report) => report.reportId === selectedCompareReportId);
-  const activeListIndex = latestItems.length && compareSelectionIndex >= 0 ? compareSelectionIndex % latestItems.length : -1;
+  const activeListIndex = latestItems.findIndex(({ item: candidateItem }) => linkedComparisonReport(candidateItem.trace)?.reportId === selectedCompareReportId);
   const revealed = useMemo(() => visibleTraceCallEvents(run, progress), [run, progress]);
   const selectedEvent = run.events.find((event) => event.eventId === selectedEventId) ?? revealed.at(-1) ?? null;
 
@@ -207,18 +218,19 @@ function AppContent() {
     setView("compare");
   }
 
-  function toggleRunDetail(batchId: string, id: string, listIndex: number) {
+  function toggleRunDetail(batchId: string, id: string) {
     if (view === "details" && batchId === selectedBatchId && id === selectedRunId) {
       openCompare();
       return;
     }
-    const linkedReport = portalReports.length > 0 ? portalReports[listIndex % portalReports.length] : undefined;
+    const linkedRun = batches.find((candidate) => candidate.batchId === batchId)?.items.find((candidate) => candidate.trace.runId === id)?.trace;
+    const linkedReport = linkedRun == null ? undefined : linkedComparisonReport(linkedRun);
     if (linkedReport) setSelectedCompareReportId(linkedReport.reportId);
     activateRun(batchId, id);
   }
 
-  function selectRunForComparison(listIndex: number) {
-    const linkedReport = portalReports[listIndex % portalReports.length];
+  function selectRunForComparison(candidate: ArgusRun) {
+    const linkedReport = linkedComparisonReport(candidate);
     if (!linkedReport) return;
     setSelectedCompareReportId(linkedReport.reportId);
     setPlaying(false);
@@ -275,11 +287,11 @@ function AppContent() {
               const StateIcon = failed ? TriangleAlert : CheckCircle2;
               return <li key={`${candidateBatch.batchId}:${candidate.runId}`}>
                 <div className={`run-index-item ${active ? "is-active" : ""} ${failed ? "is-failed" : ""}`}>
-                  <button type="button" className="run-index-copy" aria-label={`Select ${displayRunId(candidate.runId)} for comparison`} aria-pressed={active} onClick={() => selectRunForComparison(listIndex)}>
+                  <button type="button" className="run-index-copy" aria-label={`Select ${displayRunId(candidate.runId)} for comparison`} aria-pressed={active} onClick={() => selectRunForComparison(candidate)}>
                     <span className="run-index-title"><strong>{displayRunId(candidate.runId)}</strong><span className={`run-index-status ${failed ? "is-failed" : "is-success"}`} role="img" aria-label={listStatus.replaceAll("_", " ")}><StateIcon size={14} aria-hidden="true" /></span></span>
                     <time dateTime={candidate.events.at(-1)?.timestamp ?? candidate.importedAt}>{runClock(candidate)}</time>
                   </button>
-                  <button type="button" className={`run-index-open ${detailOpen ? "is-open" : ""}`} aria-label={detailOpen ? `Close ${displayRunId(candidate.runId)} run detail` : `Open ${displayRunId(candidate.runId)} run detail`} aria-pressed={detailOpen} onClick={() => toggleRunDetail(candidateBatch.batchId, candidate.runId, listIndex)}>{detailOpen ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}</button>
+                  <button type="button" className={`run-index-open ${detailOpen ? "is-open" : ""}`} aria-label={detailOpen ? `Close ${displayRunId(candidate.runId)} run detail` : `Open ${displayRunId(candidate.runId)} run detail`} aria-pressed={detailOpen} onClick={() => toggleRunDetail(candidateBatch.batchId, candidate.runId)}>{detailOpen ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}</button>
                 </div>
               </li>;
             })}

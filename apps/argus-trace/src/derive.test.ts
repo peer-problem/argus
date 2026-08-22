@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isArgusRun } from "./contracts.ts";
 import { capShare, comparisonIsMatched, costEfficiencyIndex, dependencyWaveCount, eventStart, finalAnswerPreview, formatDuration, notGradedItems, observedSum, portalTokenEfficiency, taskCount, timelineDuration, tokenTotal, traceCallSpans, visibleEvents, visibleTraceCallEvents, weightedPortalScore } from "./derive.ts";
 import { dataArrivalsFor, demoBatches, demoRuns } from "./data/demo.ts";
-import { capturedPortalReports } from "./data/portalReports.ts";
+import { addedPortalReports, capturedPortalReports, demoLinkedPortalReports } from "./data/portalReports.ts";
 
 describe("trace derivations", () => {
   it("reveals at least the first event while replaying", () => {
@@ -138,7 +138,7 @@ describe("trace derivations", () => {
   });
 
   it("keeps Portal batch scoring and token efficiency explicit", () => {
-    const report = capturedPortalReports[0]!;
+    const report = demoLinkedPortalReports[0]!;
     expect(weightedPortalScore(report)).toBeCloseTo(0.426, 3);
     expect(report.score).toBe(0.426);
     expect(portalTokenEfficiency(report)).toBeCloseTo(16.84, 2);
@@ -147,9 +147,14 @@ describe("trace derivations", () => {
     expect(report.modelUsage.reduce((total, model) => total + model.totalTokens, 0)).toBe(report.tokens.total);
   });
 
-  it("preserves the six captured Portal reports without inventing missing evidence", () => {
-    expect(capturedPortalReports).toHaveLength(6);
+  it("preserves all nine captured Portal reports without inventing missing evidence", () => {
+    expect(addedPortalReports).toHaveLength(3);
+    expect(demoLinkedPortalReports).toHaveLength(6);
+    expect(capturedPortalReports).toHaveLength(9);
     expect(capturedPortalReports.map((report) => [report.team, report.runName, report.score])).toEqual([
+      ["CouchPotato", "couchpotato-hidden-c9f31618", 0.285],
+      ["DemoDayCare", "demodaycare-hidden-bce040e5", 0.393],
+      ["CouchPotato", "couchpotato-hidden-cf5ccb29", 0.045],
       ["MISHULTA", "mishulta-hidden-8144245b", 0.426],
       ["TheresNoFree", "theresnofree-hidden", 0.403],
       ["CouchPotato", "couchpotato-hidden-a8fd641c", 0.254],
@@ -170,9 +175,12 @@ describe("trace derivations", () => {
       expect(report.evidence).toMatchObject({ protocol: "Portal run detail capture", receivedAt: null });
     }
 
-    expect(capturedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 327, totalTokens: 2_529_549 });
-    expect(capturedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 26, totalTokens: 77_577 });
-    expect(capturedPortalReports[5]!.modelUsage[0]).toMatchObject({ requests: 1_464, totalTokens: 5_381_381 });
+    expect(addedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 802, totalTokens: 2_858_287 });
+    expect(addedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 112, totalTokens: 419_632 });
+    expect(addedPortalReports[2]!.modelUsage[0]).toMatchObject({ requests: 1_573, totalTokens: 5_368_480 });
+    expect(demoLinkedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 327, totalTokens: 2_529_549 });
+    expect(demoLinkedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 26, totalTokens: 77_577 });
+    expect(demoLinkedPortalReports[5]!.modelUsage[0]).toMatchObject({ requests: 1_464, totalTokens: 5_381_381 });
   });
 
   it("previews final answers without losing the exact artifact", () => {
