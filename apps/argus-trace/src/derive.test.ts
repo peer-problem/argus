@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { validateSchema } from "../../../lab/lib/schema.ts";
-import { capShare, comparisonIsMatched, dependencyWaveCount, finalAnswerPreview, formatDuration, taskCount, visibleEvents } from "./derive.ts";
+import { capShare, comparisonIsMatched, costEfficiencyIndex, dependencyWaveCount, finalAnswerPreview, formatDuration, notGradedItems, portalTokenEfficiency, taskCount, visibleEvents, weightedPortalScore } from "./derive.ts";
 import { dataArrivalsFor, demoBatches, demoRuns } from "./data/demo.ts";
+import { demoPortalReports } from "./data/portalReports.ts";
 
 describe("trace derivations", () => {
   it("reveals at least the first event while replaying", () => {
@@ -23,12 +24,40 @@ describe("trace derivations", () => {
     expect(dependencyWaveCount(multiWave)).toBe(2);
   });
 
+  it("keeps repeated model calls and their context limits visible per run", () => {
+    const complex = demoRuns.find((run) => run.runId === "ARGUS-C2-031")!;
+    expect(complex.modelUsage).toEqual(expect.arrayContaining([
+      expect.objectContaining({ model: "furiosa-ai/Qwen3-32B-FP8", calls: 2, contextWindowTokens: 40_000 }),
+      expect.objectContaining({ model: "furiosa-ai/gpt-oss-120b", calls: 2, contextWindowTokens: 128_000 })
+    ]));
+    expect(complex.events.filter((event) => event.model?.includes("Qwen3") && event.tokens.input > 0)).toHaveLength(2);
+    expect(complex.events.filter((event) => event.model?.includes("gpt-oss") && event.tokens.input > 0)).toHaveLength(2);
+  });
+
   it("only compares scored runs from the same item", () => {
     expect(comparisonIsMatched(demoRuns[0]!, demoRuns[1]!)).toBe(true);
     expect(comparisonIsMatched(demoRuns[0]!, demoRuns[2]!)).toBe(false);
     const unknown = structuredClone(demoRuns[1]!);
     unknown.score = null;
     expect(comparisonIsMatched(demoRuns[0]!, unknown)).toBe(false);
+  });
+
+  it("maps visible-set normalized cost to a transparent efficiency index", () => {
+    const lowestCost = demoRuns.reduce((best, run) => run.totals.normalizedCost < best.totals.normalizedCost ? run : best);
+    const highestCost = demoRuns.reduce((worst, run) => run.totals.normalizedCost > worst.totals.normalizedCost ? run : worst);
+    expect(costEfficiencyIndex(lowestCost, demoRuns)).toBe(100);
+    expect(costEfficiencyIndex(highestCost, demoRuns)).toBe(0);
+    expect(costEfficiencyIndex(demoRuns[0]!, [demoRuns[0]!])).toBe(100);
+  });
+
+  it("keeps Portal batch scoring and token efficiency explicit", () => {
+    const report = demoPortalReports[0]!;
+    expect(weightedPortalScore(report)).toBeCloseTo(0.093, 3);
+    expect(report.score).toBe(0.093);
+    expect(portalTokenEfficiency(report)).toBeCloseTo(25.513, 3);
+    expect(notGradedItems(report)).toBe(4);
+    expect(report.tokens.input + report.tokens.output).toBe(report.tokens.total);
+    expect(report.modelUsage.reduce((total, model) => total + model.totalTokens, 0)).toBe(report.tokens.total);
   });
 
   it("previews final answers without losing the exact artifact", () => {

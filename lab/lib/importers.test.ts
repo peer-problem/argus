@@ -14,7 +14,7 @@ describe("evidence importers", () => {
       final_answer: "*** PATCH START ***\n...\n*** PATCH END ***",
       outcome: "graded",
       caps: { per_run_token_cap: 100000, per_item_wallclock_seconds: 300, usedTokens: 1100, elapsedMs: 2200 },
-      model_breakdown: [{ model: "furiosa-ai/Qwen3-32B-FP8", calls: 2, input_tokens: 1000, output_tokens: 100, latency_ms: 2200 }],
+      model_breakdown: [{ model: "furiosa-ai/Qwen3-32B-FP8", calls: 2, input_tokens: 1000, output_tokens: 100, latency_ms: 2200, context_window_tokens: 40000 }],
       tasks: [{ id: "patch", title: "Produce minimal patch", agent: "ARGUS Solver", status: "completed", result: "minimal patch candidate produced", depends_on: ["inspect"], wave: 1 }],
       compliance: { userToolsZero: true, plannerNativeProtocol: true, memoryOff: true, outputContract: true }
     });
@@ -22,6 +22,7 @@ describe("evidence importers", () => {
     expect(run.totals.normalizedCost).toBe(220);
     expect(run.events).toHaveLength(2);
     expect(run.events[0]?.dependsOnTaskIds).toEqual(["inspect"]);
+    expect(run.modelUsage[0]?.contextWindowTokens).toBe(40_000);
     expect(run.compliance.fallbackFree).toBe(true);
     expect(validateSchema("run", run).ok).toBe(true);
   });
