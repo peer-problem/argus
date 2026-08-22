@@ -4,6 +4,8 @@ ARGUS is a frontend-only dashboard for replaying and comparing normalized execut
 
 The repository does not define an execution roster, model route, system instruction, track instruction, experiment plan, or trial workflow. The dashboard derives agents, roles, models, tasks, waves, checks, and artifact identities from each imported run so those values can change between runs without a frontend change.
 
+ARGUS Trace uses a local interface system with angular surfaces, compact controls, light/dark tokens, and accessible compound primitives.
+
 ## Commands
 
 ```bash
