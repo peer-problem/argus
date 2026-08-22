@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-22T03:03:15Z",
+  "evidenceMode": "plan-only",
+  "authoritativeBaseline": "ARGUS-C0",
+  "evaluationSettingsOverridesReachRuntime": false,
+  "sharedInvariants": {
+    "userTools": 0,
+    "memoryEnabled": false,
+    "executionMode": "in-process",
+    "contextPager": "experimental-only",
+    "externalExecution": false
+  },
+  "candidates": [
+    {
+      "id": "ARGUS-G0",
+      "status": "planned",
+      "purpose": "Architecture kill-switch matrix only; never a submission candidate by itself.",
+      "baseCandidate": null,
+      "architectureVariants": ["A1", "A2", "A3", "AF"],
+      "plannerModels": [
+        "furiosa-ai/Qwen3-32B-FP8",
+        "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16"
+      ],
+      "solverModels": [
+        "furiosa-ai/Qwen3-32B-FP8",
+        "furiosa-ai/gpt-oss-120b",
+        "furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16"
+      ],
+      "reviewerModel": null,
+      "routePolicy": "architecture-gate",
+      "dynamicRoutingImplemented": false,
+      "promotionGates": [
+        "PLANNER_PROTOCOL",
+        "SWE_FIDELITY",
+        "FALLBACK_ZERO",
+        "CAP_OBSERVED"
+      ]
+    },
+    {
+      "id": "ARGUS-C0",
+      "status": "testing",
+      "purpose": "Context-safe v1 baseline bound to the manually created live Squad.",
+      "baseCandidate": null,
+      "architectureVariants": ["A2"],
+      "plannerModels": ["furiosa-ai/Qwen3-32B-FP8"],
+      "solverModels": ["furiosa-ai/gpt-oss-120b"],
+      "reviewerModel": null,
+      "routePolicy": "fixed",
+      "dynamicRoutingImplemented": false,
+      "promotionGates": [
+        "REQUEST_BYTES",
+        "PLANNER_PROTOCOL",
+        "SWE_FIDELITY",
+        "SUBMISSION_BINDING",
+        "CAP_OBSERVED",
+        "FALLBACK_ZERO",
+        "FORMAT_PROVEN"
+      ]
+    },
+    {
+      "id": "ARGUS-C1",
+      "status": "planned",
+      "purpose": "Cost-adaptive Solver route for only item strata with paired route evidence.",
+      "baseCandidate": "ARGUS-C0",
+      "architectureVariants": ["A2"],
+      "plannerModels": ["furiosa-ai/Qwen3-32B-FP8"],
+      "solverModels": [
+        "furiosa-ai/Qwen3-32B-FP8",
+        "furiosa-ai/gpt-oss-120b"
+      ],
+      "reviewerModel": null,
+      "routePolicy": "evidence-gated-cost-adaptive",
+      "dynamicRoutingImplemented": false,
+      "promotionGates": [
+        "PAIRED_SAMPLE_MATCH",
+        "CONTEXT_ROUTE_EVIDENCE",
+        "ACCURACY_COST_FRONTIER",
+        "FORMAT_NO_REGRESSION"
+      ]
+    },
+    {
+      "id": "ARGUS-C2",
+      "status": "planned",
+      "purpose": "Reviewer-on candidate for only tracks with replicated weighted gain.",
+      "baseCandidate": "ARGUS-C1",
+      "architectureVariants": ["A3"],
+      "plannerModels": ["furiosa-ai/Qwen3-32B-FP8"],
+      "solverModels": [
+        "furiosa-ai/Qwen3-32B-FP8",
+        "furiosa-ai/gpt-oss-120b"
+      ],
+      "reviewerModel": "furiosa-ai/Qwen3-32B-FP8",
+      "routePolicy": "reviewer-evidence-gated",
+      "dynamicRoutingImplemented": false,
+      "promotionGates": [
+        "REVIEWER_PAIRED_GAIN",
+        "CONTEXT_DUPLICATION_MEASURED",
+        "FORMAT_NO_REGRESSION",
+        "TIMEOUT_NO_REGRESSION",
+        "ACCURACY_COST_FRONTIER"
+      ]
+    },
+    {
+      "id": "ARGUS-C3",
+      "status": "planned",
+      "purpose": "Planner upgrade candidate; changes only the Planner after C1/C2 evidence exists.",
+      "baseCandidate": "ARGUS-C2",
+      "architectureVariants": ["A3"],
+      "plannerModels": ["furiosa-ai/K-EXAONE-236B-A23B-NVFP4A16"],
+      "solverModels": [
+        "furiosa-ai/Qwen3-32B-FP8",
+        "furiosa-ai/gpt-oss-120b"
+      ],
+      "reviewerModel": "furiosa-ai/Qwen3-32B-FP8",
+      "routePolicy": "planner-upgrade-only",
+      "dynamicRoutingImplemented": false,
+      "promotionGates": [
+        "PLANNER_PROTOCOL",
+        "PAIRED_SAMPLE_MATCH",
+        "CONTEXT_DUPLICATION_MEASURED",
+        "ACCURACY_COST_FRONTIER",
+        "FORMAT_NO_REGRESSION"
+      ]
+    }
+  ]
+}
