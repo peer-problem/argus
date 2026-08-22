@@ -86,20 +86,8 @@ export interface ArgusRun {
   };
   totals: TokenUsage & { latencyMs: number };
   modelUsage: ModelUsage[];
-  hashes: {
-    dataset: string | null;
-    squadConfig: string | null;
-    submissionJson: string | null;
-    prompt: string | null;
-  };
-  compliance: {
-    userToolsZero: boolean | null;
-    plannerNativeProtocol: boolean | null;
-    memoryOff: boolean | null;
-    hashesPresent: boolean | null;
-    outputContract: boolean | null;
-    fallbackFree: boolean | null;
-  };
+  hashes: Record<string, string | null>;
+  compliance: Record<string, boolean | null>;
   events: ArgusEvent[];
   rawEvidenceRefs: string[];
   importedAt: string;
@@ -194,70 +182,3 @@ export interface PortalBatchRunReport {
     reference: string;
   };
 }
-
-export interface ArgusExperiment {
-  runId: string;
-  candidateId?: string;
-  architecture?: "A1" | "A2" | "A3" | "AF";
-  runKind?: "test" | "submission";
-  track: Exclude<Track, "unknown">;
-  itemId: string;
-  stratum?: string;
-  repeat?: number;
-  datasetHash: string;
-  squadConfigHash: string;
-  submissionJsonHash: string;
-  promptHash: string;
-  modelRoutes: Record<string, string>;
-  score: number;
-  formatValid: boolean;
-  outcome?: ArgusRun["outcome"];
-  itemStatus?: NonNullable<ArgusRun["failure"]>["itemStatus"];
-  failureKind?: NonNullable<ArgusRun["failure"]>["kind"];
-  failureOwner?: NonNullable<ArgusRun["failure"]>["owner"];
-  secondaryTags?: string[];
-  timeout?: boolean;
-  tokens: {
-    input: number;
-    output: number;
-    reasoning: number;
-    cachedInput: number;
-    byModel: Record<string, unknown>;
-  };
-  normalizedCost: number;
-  latencyMs: number;
-  contextDuplicationFactor?: number | null;
-  failureClass: string | null;
-  portalRunId: string | null;
-  graderRef?: string | null;
-  recordedAt?: string;
-}
-
-export interface ValidationIssue {
-  code: string;
-  message: string;
-  path?: string;
-  severity: "error" | "warning";
-}
-
-export interface ValidationResult<T = unknown> {
-  ok: boolean;
-  value?: T;
-  issues: ValidationIssue[];
-}
-
-export interface GateEvidence {
-  status: "passed" | "failed" | "unverified";
-  evidenceRef?: string;
-  evidenceHash?: string;
-  measuredAt?: string;
-  notes?: string;
-}
-
-export const ZERO_TOKENS: TokenUsage = {
-  input: 0,
-  output: 0,
-  reasoning: 0,
-  cachedInput: 0,
-  normalizedCost: 0
-};

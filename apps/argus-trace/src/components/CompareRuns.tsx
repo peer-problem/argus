@@ -1,15 +1,13 @@
-import { Button } from "@base-ui/react/button";
-import { Tooltip } from "@base-ui/react/tooltip";
-import { VisAxis, VisDonut, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/react";
+import { VisAxis, VisCrosshair, VisLine, VisStackedBar, VisTooltip, VisXYContainer } from "@unovis/react";
 import { TooltipComponent } from "echarts/components";
 import { init, use, type EChartsType } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { Scatter3DChart } from "echarts-gl/charts";
 import { Grid3DComponent } from "echarts-gl/components";
-import { Box, CircleGauge, Info, MousePointer2, Rotate3D } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { PortalBatchRunReport, PortalTrackResult, Track } from "../../../../lab/lib/types.ts";
-import { formatDuration, formatNumber, notGradedItems, portalTokenEfficiency, weightedPortalScore } from "../derive.ts";
+import { Box, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import type { PortalBatchRunReport, Track } from "../types.ts";
+import { formatDuration, formatNumber, notGradedItems, portalTokenEfficiency } from "../derive.ts";
 
 use([CanvasRenderer, TooltipComponent, Scatter3DChart as never, Grid3DComponent as never]);
 
@@ -18,76 +16,87 @@ interface ModelPoint {
   model: string;
   input: number;
   output: number;
+  total: number;
 }
 
 interface TrackPoint {
   index: number;
-  track: Exclude<Track, "unknown">;
+  label: string;
+  track?: Exclude<Track, "unknown">;
   accuracy: number;
+  graded: number;
+  items: number;
+  isBench?: boolean;
 }
 
-interface TokenSlice {
-  id: string;
-  label: string;
-  value: number;
-  color: string;
+interface TimelinePoint {
+  index: number;
+  timestamp: number;
+  reportId: string;
+  runName: string;
+  score: number;
+  coding: number;
+  math: number;
+  generic: number;
+  codingAccuracy: number;
+  mathAccuracy: number;
+  genericAccuracy: number;
+  efficiency: number;
+  calls: number;
+  totalTokens: number;
 }
 
 interface ScatterDatum {
   name: string;
   reportId: string;
+  testedAt: string;
   value: [number, number, number];
   totalTokens: number;
-  score: number;
-  trackSummary: string;
+}
+
+interface CameraState {
+  alpha: number;
+  beta: number;
+  distance: number;
+  center: number[];
 }
 
 const trackColors: Record<Exclude<Track, "unknown">, string> = {
-  coding: "#2d72d2",
-  math: "#7c4dff",
-  generic: "#d9822b"
+  coding: "#6c3ff2",
+  math: "#abc929",
+  generic: "#5f6b7c"
 };
 
-const tokenColors = ["#2d72d2", "#9fb5d1"];
+const tokenColors = ["#6c3ff2", "#c7e752"];
 
 function shortModel(model: string): string {
   const name = model.split("/").at(-1) ?? model;
   return name.length > 18 ? `${name.slice(0, 16)}…` : name;
 }
 
-function percent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
 function postedClock(value: string): string {
   return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(value));
+}
+
+function timelineClock(value: number | Date): string {
+  return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(value));
 }
 
 function requestTotal(report: PortalBatchRunReport): number {
   return report.modelUsage.reduce((total, model) => total + model.requests, 0);
 }
 
-function MetricHelp({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Tooltip.Root>
-      <Tooltip.Trigger className="metric-help" aria-label={label}><Info size={13} aria-hidden="true" /></Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={8}>
-          <Tooltip.Popup className="ui-tooltip-popup metric-help-popup"><Tooltip.Arrow className="ui-tooltip-arrow" />{children}</Tooltip.Popup>
-        </Tooltip.Positioner>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
+function escapeHtml(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
 function makeScatterData(reports: PortalBatchRunReport[]): ScatterDatum[] {
   return reports.map((report) => ({
     name: report.runName,
     reportId: report.reportId,
-    value: [report.executionTimeMs / 60_000, report.score * 100, portalTokenEfficiency(report)],
-    totalTokens: report.tokens.total,
-    score: report.score,
-    trackSummary: report.trackResults.map((track) => `${track.track} ${percent(track.accuracy)}`).join(" · ")
+    testedAt: report.postedAt,
+    value: [portalTokenEfficiency(report), requestTotal(report), report.score * 100],
+    totalTokens: report.tokens.total
   }));
 }
 
@@ -101,7 +110,11 @@ function pointSize(totalTokens: number, reports: PortalBatchRunReport[], selecte
 
 function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunReport[]; selectedId: string; onSelect: (reportId: string) => void }) {
   const chartElement = useRef<HTMLDivElement>(null);
-  const selected = reports.find((report) => report.reportId === selectedId) ?? reports[0];
+  const camera = useRef<CameraState>({ alpha: 18, beta: 34, distance: 260, center: [0, 0, 0] });
+  const selected = reports.find((report) => report.reportId === selectedId) ?? reports[0]!;
+  const selectedIndex = reports.findIndex((report) => report.reportId === selected.reportId);
+  const previous = reports[selectedIndex - 1];
+  const next = reports[selectedIndex + 1];
 
   useEffect(() => {
     const element = chartElement.current;
@@ -109,47 +122,52 @@ function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunRe
     const chart = init(element, undefined, { renderer: "canvas" });
     const allData = makeScatterData(reports);
     const regular = allData.filter((datum) => datum.reportId !== selected.reportId);
-    const active = allData.filter((datum) => datum.reportId === selected.reportId);
-    const axisLabel = { color: "#526170", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 10 };
+    const active = allData.find((datum) => datum.reportId === selected.reportId)!;
+    const axisLabel = { color: "#050607", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11, fontWeight: "bold" };
     const axisCommon = {
       type: "value",
-      axisLine: { lineStyle: { color: "#798694", width: 1 } },
+      min: 0,
+      axisLine: { lineStyle: { color: "#050607", width: 2 } },
+      axisTick: { show: true, lineStyle: { color: "#050607", width: 1.5 } },
       axisLabel,
-      nameTextStyle: { color: "#1c2127", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11 },
-      splitLine: { lineStyle: { color: "#dce2e8", opacity: 0.85 } },
-      splitArea: { show: true, areaStyle: { color: ["rgba(247,249,251,.68)", "rgba(236,241,246,.45)"] } }
+      nameTextStyle: { color: "#050607", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontWeight: "bold", fontSize: 11 },
+      splitLine: { show: true, lineStyle: { color: "#111418", width: 1, opacity: 0.42 } },
+      splitArea: { show: true, areaStyle: { color: ["rgba(255,255,255,.96)", "rgba(247,248,250,.94)"] } }
     };
     const option = {
-      backgroundColor: "transparent",
-      animationDuration: 650,
-      animationDurationUpdate: 480,
+      backgroundColor: "#ffffff",
+      animationDuration: 700,
+      animationDurationUpdate: 620,
+      animationEasingUpdate: "cubicOut",
       tooltip: {
         show: true,
         trigger: "item",
-        backgroundColor: "rgba(17, 20, 24, .94)",
-        borderWidth: 0,
+        backgroundColor: "rgba(15, 10, 29, .58)",
+        borderColor: "rgba(108, 63, 242, .42)",
+        borderWidth: 1,
         padding: 12,
+        extraCssText: "backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(15, 10, 29, .12);",
         textStyle: { color: "#fff", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11 },
         formatter: (params: { data?: ScatterDatum }) => {
           const datum = params.data;
-          if (!datum) return "";
-          return `<strong style="font-size:12px">${datum.name}</strong><br/>Time&nbsp;&nbsp;${datum.value[0].toFixed(1)} min<br/>Score&nbsp; ${datum.value[1].toFixed(1)}%<br/>Yield&nbsp;&nbsp;${datum.value[2].toFixed(1)} graded / 1M tokens<br/>Tokens&nbsp;${datum.totalTokens.toLocaleString()}<br/><span style="color:#b9c7d6">${datum.trackSummary}</span>`;
+          if (!datum?.reportId) return "";
+          return `<strong style="font-size:12px">${escapeHtml(datum.name)}</strong><br/><span style="color:#c8d1da">Tested ${escapeHtml(postedClock(datum.testedAt))} UTC</span>`;
         }
       },
       grid3D: {
         boxWidth: 118,
-        boxHeight: 72,
-        boxDepth: 92,
-        environment: "#f8fafc",
-        axisPointer: { show: true, lineStyle: { color: "#2d72d2", width: 1 } },
-        light: { main: { intensity: 1.25, shadow: true, alpha: 38, beta: 28 }, ambient: { intensity: 0.62 } },
-        viewControl: { alpha: 18, beta: 34, distance: 175, minDistance: 100, maxDistance: 260, damping: 0.88, autoRotate: false, panSensitivity: 0 },
-        postEffect: { enable: true, SSAO: { enable: true, radius: 3, intensity: 1.1 }, FXAA: { enable: true } },
+        boxHeight: 76,
+        boxDepth: 96,
+        environment: "#ffffff",
+        axisPointer: { show: true, lineStyle: { color: "#050607", width: 2.25, opacity: 1 }, label: { show: false } },
+        light: { main: { intensity: 0.72, shadow: false, alpha: 34, beta: 24 }, ambient: { intensity: 0.96 } },
+        viewControl: { ...camera.current, minDistance: 120, maxDistance: 400, damping: 0.88, autoRotate: false, rotateSensitivity: 1.56, panSensitivity: 0 },
+        postEffect: { enable: false },
         temporalSuperSampling: { enable: true }
       },
-      xAxis3D: { ...axisCommon, name: "EXECUTION · MIN", min: 0, nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}` } },
-      yAxis3D: { ...axisCommon, name: "WEIGHTED SCORE · %", min: 0, max: 70, nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}%` } },
-      zAxis3D: { ...axisCommon, name: "GRADED / 1M TOKENS", min: 0, nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}` } },
+      xAxis3D: { ...axisCommon, name: "EFFICIENCY", nameGap: 30, axisLabel: { ...axisLabel, formatter: (value: number) => value.toFixed(1) } },
+      yAxis3D: { ...axisCommon, name: "MODEL CALLS", nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}` } },
+      zAxis3D: { ...axisCommon, name: "BENCH", max: 70, nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}%` } },
       series: [
         {
           name: "Runs",
@@ -158,26 +176,36 @@ function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunRe
           data: regular,
           symbol: "circle",
           symbolSize: (_value: number[], params: { data: ScatterDatum }) => pointSize(params.data.totalTokens, reports),
-          itemStyle: { color: "#2d72d2", opacity: 0.88, borderColor: "#ffffff", borderWidth: 1 },
-          label: { show: true, formatter: "{b}", distance: 4, color: "#354250", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 9, backgroundColor: "rgba(255,255,255,.78)", padding: [3, 5] },
-          emphasis: { itemStyle: { color: "#7c4dff", opacity: 1 } }
+          itemStyle: { color: "#6c3ff2", opacity: 0.96, borderColor: "#050607", borderWidth: 1 },
+          label: { show: false },
+          emphasis: { itemStyle: { color: "#8b67ff", opacity: 1 } }
         },
         {
           name: "Selected",
           type: "scatter3D",
           coordinateSystem: "cartesian3D",
-          data: active,
+          data: [active],
           symbol: "circle",
           symbolSize: (_value: number[], params: { data: ScatterDatum }) => pointSize(params.data.totalTokens, reports, true),
-          itemStyle: { color: "#d9822b", opacity: 1, borderColor: "#111418", borderWidth: 2 },
-          label: { show: true, formatter: "{b}", distance: 6, color: "#111418", fontWeight: "bold", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 10, backgroundColor: "rgba(255,255,255,.94)", borderColor: "#d9822b", borderWidth: 1, padding: [4, 6] }
+          itemStyle: { color: "#dfff78", opacity: 1, borderColor: "#050607", borderWidth: 3 },
+          label: { show: false }
         }
       ]
     };
     chart.setOption(option as Parameters<EChartsType["setOption"]>[0]);
+    chart.on("grid3dcamerachanged", (params) => {
+      const next = params as unknown as Partial<CameraState>;
+      camera.current = {
+        alpha: next.alpha ?? camera.current.alpha,
+        beta: next.beta ?? camera.current.beta,
+        distance: next.distance ?? camera.current.distance,
+        center: next.center ?? camera.current.center
+      };
+    });
     chart.on("click", (params) => {
       const datum = params.data as unknown as ScatterDatum | undefined;
-      if (datum?.reportId) onSelect(datum.reportId);
+      if (!datum?.reportId) return;
+      onSelect(datum.reportId);
     });
     const resize = new ResizeObserver(() => chart.resize());
     resize.observe(element);
@@ -188,163 +216,178 @@ function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunRe
   }, [onSelect, reports, selected]);
 
   return (
-    <section className="run-space" aria-labelledby="run-space-title">
-      <div className="run-space-heading">
-        <div><p className="eyebrow">Portal batch runs · {reports.length}</p><h2 id="run-space-title">Performance space</h2></div>
-        <div className="run-space-help"><Rotate3D size={15} aria-hidden="true" /><span>Drag to orbit · Scroll to zoom · Click a Run</span></div>
-      </div>
+    <section className="run-space" aria-label="Run performance space">
       <div className="run-space-viewport">
-        <div ref={chartElement} className="run-space-canvas" role="img" aria-label="Interactive ECharts GL scatter plot comparing every Portal batch run by execution time, weighted score, and graded items per million tokens" />
-        <div className="run-space-brand"><strong>ECharts GL</strong><span>Point size = total tokens</span></div>
+        <div ref={chartElement} className="run-space-canvas" role="img" aria-label="3D Run comparison by efficiency, model calls, and bench score" />
+        <dl className="run-space-selection-stats" aria-label={`Selected run statistics for ${selected.runName}`}>
+          <div><dt>Bench</dt><dd>{(selected.score * 100).toFixed(1)}%</dd></div>
+          <div><dt>Efficiency</dt><dd>{portalTokenEfficiency(selected).toFixed(2)}</dd></div>
+          <div><dt>Model calls</dt><dd>{formatNumber(requestTotal(selected), 0)}</dd></div>
+        </dl>
+        <nav className="run-space-switcher" aria-label="Selected run navigation">
+          <button type="button" className="run-space-switch" onClick={() => previous && onSelect(previous.reportId)} disabled={!previous} aria-label={previous ? `Previous run: ${previous.runName}` : "No previous run"}>
+            <ChevronLeft size={18} aria-hidden="true" />
+          </button>
+          <button type="button" className="run-space-switch" onClick={() => next && onSelect(next.reportId)} disabled={!next} aria-label={next ? `Next run: ${next.runName}` : "No next run"}>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        </nav>
       </div>
-      <div className="run-space-ledger" aria-label="All Portal batch runs in the 3D graph">
-        {reports.map((report) => {
-          const active = report.reportId === selectedId;
-          return (
-            <Button key={report.reportId} type="button" className={`run-space-item ${active ? "is-selected" : ""}`} aria-pressed={active} onClick={() => onSelect(report.reportId)}>
-              <span className="run-space-item-id"><i />{report.runName}</span>
-              <span>{formatDuration(report.executionTimeMs)}</span>
-              <span>{percent(report.score)}</span>
-              <strong>{formatNumber(report.tokens.total, 1)}</strong>
-            </Button>
-          );
-        })}
-      </div>
+    </section>
+  );
+}
+
+function timelineData(reports: PortalBatchRunReport[]): TimelinePoint[] {
+  return [...reports].sort((a, b) => new Date(a.postedAt).valueOf() - new Date(b.postedAt).valueOf()).map((report, index) => {
+    const result = Object.fromEntries(report.trackResults.map((track) => [track.track, track]));
+    const coding = result.coding!;
+    const math = result.math!;
+    const generic = result.generic!;
+    return {
+      index,
+      timestamp: new Date(report.postedAt).valueOf(),
+      reportId: report.reportId,
+      runName: report.runName,
+      score: report.score * 100,
+      coding: coding.accuracy * coding.weight * 100,
+      math: math.accuracy * math.weight * 100,
+      generic: generic.accuracy * generic.weight * 100,
+      codingAccuracy: coding.accuracy * 100,
+      mathAccuracy: math.accuracy * 100,
+      genericAccuracy: generic.accuracy * 100,
+      efficiency: portalTokenEfficiency(report),
+      calls: requestTotal(report),
+      totalTokens: report.tokens.total
+    };
+  });
+}
+
+function timelineTooltip(point: TimelinePoint): string {
+  return `<div class="chart-tooltip"><strong>${escapeHtml(point.runName)}</strong><span>${timelineClock(point.timestamp)} UTC</span><dl><div><dt>Bench score</dt><dd>${point.score.toFixed(1)}%</dd></div><div><dt>Coding</dt><dd>${point.codingAccuracy.toFixed(1)}%</dd></div><div><dt>Math</dt><dd>${point.mathAccuracy.toFixed(1)}%</dd></div><div><dt>Generic</dt><dd>${point.genericAccuracy.toFixed(1)}%</dd></div></dl></div>`;
+}
+
+function AllRunsStats({ reports }: { reports: PortalBatchRunReport[] }) {
+  const data = useMemo(() => timelineData(reports), [reports]);
+  const scoreAccessors = [(point: TimelinePoint) => point.coding, (point: TimelinePoint) => point.math, (point: TimelinePoint) => point.generic];
+  const timeAt = (value: number | Date) => timelineClock(data[Math.max(0, Math.round(Number(value)))]?.timestamp ?? data[0]!.timestamp);
+  const joinedBarStep = data.length > 1 ? data.length / (data.length - 1) : 1;
+  return (
+    <section className="all-runs-stats" aria-label="All Run statistics">
+      <article className="timeline-chart timeline-chart-score">
+        <div className="timeline-chart-head"><h2>Bench scores</h2><div className="timeline-legend"><span><i style={{ background: trackColors.coding }} />Coding 2×</span><span><i style={{ background: trackColors.math }} />Math 1×</span><span><i style={{ background: trackColors.generic }} />Generic 1×</span></div></div>
+        <div className="unovis-chart timeline-main-chart">
+          <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, 70]}>
+            <VisStackedBar<TimelinePoint> x={(point) => point.index} y={scoreAccessors} color={[trackColors.coding, trackColors.math, trackColors.generic]} dataStep={joinedBarStep} barPadding={0} roundedCorners={0} duration={700} />
+            <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
+            <VisAxis<TimelinePoint> type="y" numTicks={4} tickFormat={(value) => `${Math.round(Number(value))}%`} />
+            <VisTooltip />
+            <VisCrosshair<TimelinePoint> x={(point) => point.index} yStacked={scoreAccessors} color={[trackColors.coding, trackColors.math, trackColors.generic]} template={timelineTooltip} visibilityThreshold={0} />
+          </VisXYContainer>
+        </div>
+      </article>
+      <article className="timeline-chart">
+        <div className="timeline-chart-head"><h2>Token efficiency</h2><span>score / 1M tokens</span></div>
+        <div className="unovis-chart">
+          <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, undefined]}>
+            <VisLine<TimelinePoint> x={(point) => point.index} y={(point) => point.efficiency} color="#6c3ff2" lineWidth={3} duration={700} />
+            <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
+            <VisAxis<TimelinePoint> type="y" numTicks={4} tickFormat={(value) => Number(value).toFixed(1)} />
+            <VisTooltip />
+            <VisCrosshair<TimelinePoint> x={(point) => point.index} y={(point) => point.efficiency} color="#6c3ff2" template={(point) => `<div class="chart-tooltip"><strong>${escapeHtml(point.runName)}</strong><dl><div><dt>Efficiency</dt><dd>${point.efficiency.toFixed(2)}</dd></div></dl></div>`} visibilityThreshold={0} />
+          </VisXYContainer>
+        </div>
+      </article>
+      <article className="timeline-chart">
+        <div className="timeline-chart-head"><h2>Model calls</h2><span>requests</span></div>
+        <div className="unovis-chart">
+          <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, undefined]}>
+            <VisStackedBar<TimelinePoint> x={(point) => point.index} y={[(point) => point.calls]} color="#abc929" dataStep={joinedBarStep} barPadding={0} roundedCorners={0} duration={700} />
+            <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
+            <VisAxis<TimelinePoint> type="y" numTicks={4} tickFormat={(value) => formatNumber(Number(value), 0)} />
+            <VisTooltip />
+            <VisCrosshair<TimelinePoint> x={(point) => point.index} yStacked={[(point) => point.calls]} color="#abc929" template={(point) => `<div class="chart-tooltip"><strong>${escapeHtml(point.runName)}</strong><dl><div><dt>Model calls</dt><dd>${point.calls.toLocaleString()}</dd></div></dl></div>`} visibilityThreshold={0} />
+          </VisXYContainer>
+        </div>
+      </article>
     </section>
   );
 }
 
 function ModelTokenChart({ report }: { report: PortalBatchRunReport }) {
-  const data = useMemo<ModelPoint[]>(() => report.modelUsage.map((usage, index) => ({ index: index + 1, model: shortModel(usage.model), input: usage.inputTokens, output: usage.outputTokens })), [report]);
+  const data = useMemo<ModelPoint[]>(() => {
+    const models = report.modelUsage.map((usage, index) => ({ index: index + 1, model: shortModel(usage.model), input: usage.inputTokens, output: usage.outputTokens, total: usage.totalTokens }));
+    return [...models, { index: models.length + 1, model: "Total", input: report.tokens.input, output: report.tokens.output, total: report.tokens.total }];
+  }, [report]);
   const modelAt = (value: number | Date) => data[Math.max(0, Math.round(Number(value)) - 1)]?.model ?? "";
+  const accessors = [(point: ModelPoint) => point.input, (point: ModelPoint) => point.output];
   return (
     <article className="run-stat-chart">
-      <div className="run-stat-chart-head"><div><span>MODEL FOOTPRINT</span><h3>Input + output</h3></div><strong>{data.length} models</strong></div>
+      <div className="run-stat-chart-head">
+        <h3>Per-run tokens</h3>
+        <div className="chart-inline-legend"><span><i style={{ background: tokenColors[0] }} />Input</span><span><i style={{ background: tokenColors[1] }} />Output</span></div>
+      </div>
       <div className="unovis-chart" key={report.reportId}>
-        <VisXYContainer<ModelPoint> data={data} height={220} margin={{ top: 12, right: 12, bottom: 48, left: 54 }} xDomain={[0.5, Math.max(1.5, data.length + 0.5)]} yDomain={[0, undefined]}>
-          <VisStackedBar<ModelPoint> x={(point) => point.index} y={[(point) => point.input, (point) => point.output]} color={tokenColors} barPadding={0.36} roundedCorners={2} duration={650} />
+        <VisXYContainer<ModelPoint> data={data} height={150} margin={{ top: 10, right: 5, bottom: 31, left: 24 }} xDomain={[0.5, Math.max(1.5, data.length + 0.5)]} yDomain={[0, undefined]}>
+          <VisStackedBar<ModelPoint> x={(point) => point.index} y={accessors} color={tokenColors} barPadding={0.36} roundedCorners={2} duration={700} />
           <VisAxis<ModelPoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={modelAt} tickTextFontSize="9px" tickTextWidth={108} gridLine={false} />
           <VisAxis<ModelPoint> type="y" label="TOKENS" numTicks={4} tickFormat={(value) => formatNumber(Number(value), 1)} />
+          <VisTooltip />
+          <VisCrosshair<ModelPoint> x={(point) => point.index} yStacked={accessors} color={tokenColors} template={(point) => `<div class="chart-tooltip"><dl><div><dt>Input</dt><dd>${point.input.toLocaleString()}</dd></div><div><dt>Output</dt><dd>${point.output.toLocaleString()}</dd></div><div><dt>Total</dt><dd>${point.total.toLocaleString()}</dd></div></dl></div>`} visibilityThreshold={0} />
         </VisXYContainer>
       </div>
-      <div className="chart-inline-legend"><span><i style={{ background: tokenColors[0] }} />Input</span><span><i style={{ background: tokenColors[1] }} />Output</span></div>
     </article>
   );
 }
 
 function TrackAccuracyChart({ report }: { report: PortalBatchRunReport }) {
-  const data = useMemo<TrackPoint[]>(() => report.trackResults.map((result, index) => ({ index: index + 1, track: result.track, accuracy: result.accuracy * 100 })), [report]);
-  const trackAt = (value: number | Date) => data[Math.max(0, Math.round(Number(value)) - 1)]?.track ?? "";
+  const data = useMemo<TrackPoint[]>(() => {
+    const tracks = report.trackResults.map((result, index) => ({ index: index + 1, label: result.track, track: result.track, accuracy: result.accuracy * 100, graded: result.graded, items: result.items }));
+    return [...tracks, { index: tracks.length + 1, label: "Bench", accuracy: report.score * 100, graded: report.scoredItems, items: report.totalItems, isBench: true }];
+  }, [report]);
+  const trackAt = (value: number | Date) => data[Math.max(0, Math.round(Number(value)) - 1)]?.label ?? "";
+  const accessors = [(point: TrackPoint) => point.accuracy];
+  const color = (point: TrackPoint) => point.isBench ? "#dfff78" : trackColors.coding;
   return (
     <article className="run-stat-chart">
-      <div className="run-stat-chart-head"><div><span>BENCHMARK</span><h3>Per-track accuracy</h3></div><strong>{percent(report.score)} weighted</strong></div>
+      <div className="run-stat-chart-head"><h3>Per-run track accuracy</h3></div>
       <div className="unovis-chart" key={report.reportId}>
-        <VisXYContainer<TrackPoint> data={data} height={220} margin={{ top: 12, right: 12, bottom: 42, left: 48 }} xDomain={[0.5, 3.5]} yDomain={[0, 100]}>
-          <VisStackedBar<TrackPoint> x={(point) => point.index} y={[(point) => point.accuracy]} color={data.map((point) => trackColors[point.track])} barPadding={0.34} roundedCorners={2} duration={650} />
+        <VisXYContainer<TrackPoint> data={data} height={136} margin={{ top: 10, right: 5, bottom: 29, left: 24 }} xDomain={[0.5, Math.max(1.5, data.length + 0.5)]} yDomain={[0, 100]}>
+          <VisStackedBar<TrackPoint> x={(point) => point.index} y={accessors} color={color} barPadding={0.34} roundedCorners={2} duration={700} />
           <VisAxis<TrackPoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={trackAt} gridLine={false} />
           <VisAxis<TrackPoint> type="y" label="ACCURACY" numTicks={5} tickFormat={(value) => `${Number(value)}%`} />
+          <VisTooltip />
+          <VisCrosshair<TrackPoint> x={(point) => point.index} yStacked={accessors} color={color} template={(point) => `<div class="chart-tooltip"><dl><div><dt>${point.isBench ? "Bench accuracy" : "Accuracy"}</dt><dd>${point.accuracy.toFixed(1)}%</dd></div><div><dt>${point.isBench ? "Scored" : "Graded"}</dt><dd>${point.graded} / ${point.items}</dd></div></dl></div>`} visibilityThreshold={0} />
         </VisXYContainer>
       </div>
     </article>
   );
 }
 
-function TokenSplitChart({ report }: { report: PortalBatchRunReport }) {
-  const data: TokenSlice[] = [
-    { id: "input", label: "Input", value: report.tokens.input, color: tokenColors[0]! },
-    { id: "output", label: "Output", value: report.tokens.output, color: tokenColors[1]! }
-  ];
-  return (
-    <article className="run-stat-chart">
-      <div className="run-stat-chart-head"><div><span>TOKEN SPLIT</span><h3>Input vs output</h3></div><strong>{formatNumber(report.tokens.total, 1)}</strong></div>
-      <div className="token-mix-layout" key={report.reportId}>
-        <div className="unovis-donut"><VisSingleContainer<TokenSlice[]> data={data} height={184}><VisDonut<TokenSlice> value={(slice) => slice.value} color={(slice) => slice.color} arcWidth={24} padAngle={0.025} cornerRadius={3} centralLabel={percent(report.tokens.output / report.tokens.total)} centralSubLabel="output share" duration={650} /></VisSingleContainer></div>
-        <dl className="token-mix-legend">{data.map((slice) => <div key={slice.id}><dt><i style={{ background: slice.color }} />{slice.label}</dt><dd>{formatNumber(slice.value, 0)}</dd></div>)}</dl>
-      </div>
-    </article>
-  );
-}
-
-function TrackResultCard({ result }: { result: PortalTrackResult }) {
-  const notGraded = Math.max(0, result.items - result.graded);
-  return (
-    <article className={`track-result-card track-result-${result.track}`}>
-      <div className="track-result-head"><span>{result.track}</span><strong>{percent(result.accuracy)}</strong></div>
-      <div className="track-result-bar" aria-hidden="true"><i style={{ transform: `scaleX(${result.accuracy})`, backgroundColor: trackColors[result.track] }} /></div>
-      <dl>
-        <div><dt>Graded</dt><dd>{result.graded}</dd></div>
-        <div><dt>Items</dt><dd>{result.items}</dd></div>
-        <div><dt>Not graded</dt><dd>{notGraded}</dd></div>
-        <div><dt>Excluded</dt><dd>{result.excluded}</dd></div>
-        <div><dt>Weight</dt><dd>{Math.round(result.weight * 100)}%</dd></div>
-        <div><dt>Contribution</dt><dd>{percent(result.accuracy * result.weight)}</dd></div>
-      </dl>
-    </article>
-  );
-}
-
 function SelectedRunStats({ report }: { report: PortalBatchRunReport }) {
-  const calculated = weightedPortalScore(report);
   const missing = notGradedItems(report);
   return (
-    <section className="selected-run portal-report" aria-labelledby="selected-run-title" key={report.reportId}>
+    <section className="selected-run portal-report compare-selected-panel" aria-labelledby="selected-run-title">
       <header className="selected-run-head">
-        <div><p className="eyebrow">Selected Portal run · {report.team}</p><h2 id="selected-run-title">{report.runName}</h2><p>{report.status} · posted {postedClock(report.postedAt)} UTC · {report.evidence.protocol} received {postedClock(report.evidence.receivedAt)} UTC</p></div>
+        <div><h2 id="selected-run-title">{report.runName}</h2><p>{formatDuration(report.executionTimeMs)} · {postedClock(report.evidence.receivedAt)} UTC</p></div>
         <span className={`status-mark status-${report.status}`}>{report.status}</span>
       </header>
 
-      <dl className="portal-primary-metrics">
-        <div className="metric-total-tokens"><dt>Total tokens</dt><dd>{report.tokens.total.toLocaleString()}</dd><small>{report.tokens.input.toLocaleString()} input + {report.tokens.output.toLocaleString()} output</small></div>
-        <div><dt>Weighted score <MetricHelp label="How the score is weighted">Coding has 2 parts of the score; math and generic have 1 part each. The normalized weights are 50%, 25%, and 25%.</MetricHelp></dt><dd>{percent(report.score)}</dd><small>tracks calculate to {percent(calculated)}</small></div>
-        <div><dt>Execution time</dt><dd>{formatDuration(report.executionTimeMs)}</dd><small>{report.caps.wallClockSeconds == null ? "no wall-clock cap" : `${formatDuration(report.caps.wallClockSeconds * 1_000)} cap`}</small></div>
-        <div><dt>Score coverage</dt><dd>{report.scoredItems} / {report.totalItems}</dd><small>Portal headline fields</small></div>
-        <div><dt>Requests</dt><dd>{requestTotal(report).toLocaleString()}</dd><small>across {report.modelUsage.length} models</small></div>
-      </dl>
+      <div className="run-stat-grid portal-chart-grid"><TrackAccuracyChart report={report} /><ModelTokenChart report={report} /></div>
 
-      <section className="portal-track-results" aria-labelledby="portal-track-title">
-        <div className="portal-section-head">
-          <div><p className="eyebrow">Most important benchmark detail</p><h3 id="portal-track-title">Per-track accuracy</h3></div>
-          <div className="score-formula"><span>Coding × 2</span><span>Math × 1</span><span>Generic × 1</span><MetricHelp label="Items and Graded definition">Items is the total question count. Graded excludes cases where the Agent Squad returned no answer or a patch could not be inspected, such as an invalid filename.</MetricHelp></div>
-        </div>
-        <div className="track-result-grid">{report.trackResults.map((result) => <TrackResultCard key={result.track} result={result} />)}</div>
-        <p className="portal-field-note"><Info size={14} aria-hidden="true" />Portal exposes headline score coverage and per-track Graded as separate fields. ARGUS displays both source values without overwriting either one. Across the track rows, {missing} item{missing === 1 ? " is" : "s are"} not graded.</p>
-      </section>
-
-      <div className="run-stat-grid portal-chart-grid"><TrackAccuracyChart report={report} /><ModelTokenChart report={report} /><TokenSplitChart report={report} /></div>
-
-      <section className="portal-model-usage" aria-labelledby="portal-model-title">
-        <div className="portal-section-head"><div><p className="eyebrow">Queryable detail</p><h3 id="portal-model-title">Per-model token usage</h3></div><strong>{report.modelUsage.length} models · {requestTotal(report).toLocaleString()} requests</strong></div>
-        <div className="portal-table-wrap">
-          <table>
-            <thead><tr><th>Model</th><th>Input</th><th>Output</th><th>Requests</th><th>Total</th></tr></thead>
-            <tbody>{report.modelUsage.map((usage) => <tr key={usage.model}><th>{usage.model}</th><td>{usage.inputTokens.toLocaleString()}</td><td>{usage.outputTokens.toLocaleString()}</td><td className="secondary-value">{usage.requests.toLocaleString()}</td><td><strong>{usage.totalTokens.toLocaleString()}</strong></td></tr>)}</tbody>
-            <tfoot><tr><th>Total</th><td>{report.tokens.input.toLocaleString()}</td><td>{report.tokens.output.toLocaleString()}</td><td className="secondary-value">{requestTotal(report).toLocaleString()}</td><td><strong>{report.tokens.total.toLocaleString()}</strong></td></tr></tfoot>
-          </table>
-        </div>
-      </section>
+      <p className="portal-field-note"><Info size={14} aria-hidden="true" />Items is the total question count. Graded excludes answers that could not be checked; {missing} item{missing === 1 ? " was" : "s were"} not graded in this Run.</p>
     </section>
   );
 }
 
-export function CompareRuns({ reports }: { reports: PortalBatchRunReport[] }) {
-  const [selectedId, setSelectedId] = useState(() => reports[0]?.reportId ?? "");
+export function CompareRuns({ reports, selectedId, onSelectedIdChange }: { reports: PortalBatchRunReport[]; selectedId: string; onSelectedIdChange: (reportId: string) => void }) {
   const selected = reports.find((report) => report.reportId === selectedId) ?? reports[0];
 
   if (!selected) return <div className="compare-empty"><Box size={20} /><p>No Portal Run report is loaded.</p></div>;
 
   return (
     <div className="analysis-page compare-runs-page">
-      <header className="page-title compare-page-title">
-        <div><p className="eyebrow">Run intelligence</p><h1>Compare runs</h1><p>Every Portal batch Run in one navigable performance space.</p></div>
-        <div className="compare-axis-key" aria-label="3D graph axes">
-          <span><i className="axis-x">X</i><b>Time</b><small>execution minutes</small></span>
-          <span><i className="axis-y">Y</i><b>Accuracy</b><small>weighted score</small></span>
-          <span><i className="axis-z">Z</i><b>Efficiency</b><small>graded / 1M tokens</small></span>
-        </div>
-      </header>
-      <div className="compare-method-note"><CircleGauge size={16} aria-hidden="true" /><p>Efficiency is an absolute yield: the sum of track-level Graded divided by total tokens, shown per one million tokens. Point size independently shows total token usage.</p><MousePointer2 size={15} aria-hidden="true" /></div>
-      <RunSpace reports={reports} selectedId={selected.reportId} onSelect={setSelectedId} />
-      <SelectedRunStats report={selected} />
+      <div className="compare-workbench"><RunSpace reports={reports} selectedId={selected.reportId} onSelect={onSelectedIdChange} /><SelectedRunStats report={selected} /></div>
+      <AllRunsStats reports={reports} />
     </div>
   );
 }
