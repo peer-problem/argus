@@ -592,6 +592,7 @@ main { min-width: 0; background: var(--ui-color-app-background); }
 .trace-hit-target.is-duration-target { min-width: 1px; }
 .trace-hit-target.is-milestone-target { width: .75rem !important; min-width: .75rem; }
 .trace-hit-target.is-at-timeline-end { translate: -100% 0; }
+.trace-hit-target.is-at-timeline-end .trace-span { outline-offset: -2px; }
 .trace-hit-target:focus-visible { outline: 2px solid var(--ui-color-ink); outline-offset: 2px; }
 .trace-span { display: flex; width: 100%; height: 100%; align-items: center; overflow: hidden; padding: 0 var(--ui-space-2); border: var(--ui-border-width) solid color-mix(in srgb, var(--trace-color) 76%, #111); background: color-mix(in srgb, var(--trace-color) 86%, white); color: white; box-shadow: 0 1px 2px rgb(28 33 39 / 12%); transform-origin: left center; transition: transform 100ms linear, opacity 80ms linear; }
 .trace-span > span { overflow: hidden; font-family: var(--ui-font-mono); font-size: .625rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -603,6 +604,7 @@ main { min-width: 0; background: var(--ui-color-app-background); }
 .trace-playhead.is-playing { transition: left 100ms linear; }
 .trace-playhead.is-at-timeline-end { translate: -1px 0; }
 .trace-playhead span { position: absolute; top: -.25rem; left: -.25rem; width: .5rem; height: .5rem; background: var(--ui-color-accent); }
+.trace-playhead.is-at-timeline-end span { left: -.5rem; }
 .trace-controls { display: grid; grid-template-columns: auto var(--ui-control-height) auto minmax(7rem, 1fr) auto; align-items: end; gap: var(--ui-space-2); margin-top: var(--ui-space-4); }
 .trace-control-copy { display: grid; min-width: 7rem; grid-template-columns: 1rem minmax(0, 1fr); align-items: center; gap: 1px var(--ui-space-1); }
 .trace-control-copy svg { grid-row: 1 / 3; color: var(--ui-color-accent); }
