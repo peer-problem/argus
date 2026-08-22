@@ -1,9 +1,0 @@
-{
-  "gate": "capGate",
-  "status": "unverified",
-  "measuredAt": "2026-08-22T01:54:57Z",
-  "portalTestRun": null,
-  "reason": "No portal evaluation has been queued. Local history cannot establish portal caps, cache accounting, outcome, or failure ownership.",
-  "nextStep": "The free Check has passed. After the user separately approves one evaluation, capture run and item caps, cached input fields, breakdown, outcome, and failure owner from run-details.",
-  "policy": "A free Check is non-queued. A queued evaluation remains a separate cost-bearing action."
-}
