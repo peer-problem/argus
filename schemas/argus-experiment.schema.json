@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://argus.local/schemas/argus-experiment.schema.json",
+  "title": "ARGUS experiment record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runId", "track", "itemId", "datasetHash", "squadConfigHash", "submissionJsonHash", "promptHash", "modelRoutes", "score", "formatValid", "tokens", "normalizedCost", "latencyMs", "failureClass", "portalRunId"],
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "candidateId": { "type": "string", "minLength": 1 },
+    "architecture": { "enum": ["A1", "A2", "A3", "AF"] },
+    "runKind": { "enum": ["test", "submission"] },
+    "track": { "enum": ["coding", "math", "generic"] },
+    "itemId": { "type": "string" },
+    "stratum": { "type": "string", "minLength": 1 },
+    "repeat": { "type": "integer", "minimum": 1 },
+    "datasetHash": { "type": "string" },
+    "squadConfigHash": { "type": "string" },
+    "submissionJsonHash": { "type": "string" },
+    "promptHash": { "type": "string" },
+    "modelRoutes": { "type": "object", "additionalProperties": { "type": "string" } },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "formatValid": { "type": "boolean" },
+    "outcome": { "enum": ["graded", "extraction_failed", "capped", "grader_error", "infrastructure_failed", "unknown"] },
+    "itemStatus": { "enum": ["ok", "capped_tokens", "capped_wallclock", "error", "unknown"] },
+    "failureKind": { "enum": ["infrastructure", "upstream_error", "token_cap", "wallclock_cap", "runner", "unknown"] },
+    "failureOwner": { "enum": ["team", "policy", "configuration", "organizer", "unknown"] },
+    "secondaryTags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "timeout": { "type": "boolean" },
+    "tokens": {
+      "type": "object",
+      "required": ["input", "output", "reasoning", "cachedInput", "byModel"],
+      "properties": {
+        "input": { "type": "number", "minimum": 0 },
+        "output": { "type": "number", "minimum": 0 },
+        "reasoning": { "type": "number", "minimum": 0 },
+        "cachedInput": { "type": "number", "minimum": 0 },
+        "byModel": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "normalizedCost": { "type": "number", "minimum": 0 },
+    "latencyMs": { "type": "number", "minimum": 0 },
+    "contextDuplicationFactor": { "type": ["number", "null"], "minimum": 0 },
+    "failureClass": { "type": ["string", "null"] },
+    "portalRunId": { "type": ["string", "null"] },
+    "graderRef": { "type": ["string", "null"] },
+    "recordedAt": { "type": "string", "format": "date-time" }
+  }
+}
