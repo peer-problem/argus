@@ -1,7 +1,7 @@
 import { Tabs } from "@base-ui/react/tabs";
 import { Braces, FileText, Timer, Waypoints } from "lucide-react";
 import { useState } from "react";
-import type { ArgusEvent } from "../../../../lab/lib/types.ts";
+import type { ArgusEvent } from "../types.ts";
 import { formatDuration, formatNumber } from "../derive.ts";
 
 export function Inspector({ event }: { event: ArgusEvent | null }) {

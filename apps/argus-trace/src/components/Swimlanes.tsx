@@ -1,7 +1,7 @@
 import { Button } from "@base-ui/react/button";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
-import type { ArgusEvent, ArgusRun } from "../../../../lab/lib/types.ts";
+import type { ArgusEvent, ArgusRun } from "../types.ts";
 import { agentNames, eventStart, formatDuration } from "../derive.ts";
 import { PeerButton, PeerIconButton, PeerSelect, PeerSlider } from "./peer/PeerControls.tsx";
 
@@ -32,9 +32,11 @@ export function Swimlanes({ run, events, selectedEventId, progress, playing, spe
       </div>
       <div className="swimlane-grid" style={gridStyle}>
         <div className="lane-axis"><span>0</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
-        {agents.map((agent) => (
+        {agents.map((agent) => {
+          const role = run.events.find((event) => event.agentId === agent && event.agentRole)?.agentRole ?? "Observed agent";
+          return (
           <div className={`lane ${agentFilter !== "all" && agentFilter !== agent ? "is-dimmed" : ""}`} key={agent}>
-            <div className="lane-label"><strong>{agent.replace("ARGUS ", "")}</strong><small>{agent === "ARGUS Planner" ? "native protocol" : "model inference"}</small></div>
+            <div className="lane-label"><strong>{agent}</strong><small>{role}</small></div>
             <div className="lane-track">
               {[0.25, 0.5, 0.75].map((value) => <i key={value} style={{ left: `${value * 100}%` }} />)}
               {events.filter((event) => event.agentId === agent).map((event) => {
@@ -53,7 +55,8 @@ export function Swimlanes({ run, events, selectedEventId, progress, playing, spe
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
         <div className="playhead" aria-hidden="true"><span /></div>
       </div>
       <div className="replay-controls">
