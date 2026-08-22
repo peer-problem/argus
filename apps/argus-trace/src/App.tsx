@@ -1,17 +1,18 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { CheckCircle2, ChevronLeft, ChevronRight, GitCompareArrows, Import, Radar, TriangleAlert } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, FlaskConical, GitCompareArrows, Import, Radar, TriangleAlert } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusRun } from "./types.ts";
 import { DataArrivalFlow, RunSignals, TokenFlow } from "./components/AnalysisViews.tsx";
 import { isArgusRun } from "./contracts.ts";
 import { ExecutionTrace } from "./components/ExecutionTrace.tsx";
 import { Inspector } from "./components/Inspector.tsx";
-import { UiButton, UiToastViewport } from "./components/ui/Controls.tsx";
+import { RunResultDetails } from "./components/RunResultDetails.tsx";
+import { UiButton, UiIconButton, UiToastViewport } from "./components/ui/Controls.tsx";
 import { demoBatches, demoRuns, makeImportedBatch } from "./data/demo.ts";
-import { demoPortalReports } from "./data/portalReports.ts";
-import { capShare, dependencyWaveCount, finalAnswerPreview, formatDuration, formatNumber, taskCount, timelineDuration, visibleEvents } from "./derive.ts";
+import { capturedPortalReports } from "./data/portalReports.ts";
+import { capShare, formatDuration, formatNumber, taskCount, traceCallSpans, visibleTraceCallEvents } from "./derive.ts";
 
 type View = "details" | "compare";
 
@@ -44,6 +45,7 @@ function runClock(run: ArgusRun): string {
 const initialDemoRun = [...demoRuns].sort((a, b) => runTimestamp(b) - runTimestamp(a))[0]!;
 
 function conciseRunWarning(run: ArgusRun): string | null {
+  if (run.failure?.message) return run.failure.message;
   if (run.outcome === "extraction_failed") return "Required final-answer format was not met.";
   if (run.status === "capped") return "Run stopped at its configured limit.";
   if (run.status === "failed" || run.failure) return "Run failed before a final answer was accepted.";
@@ -51,9 +53,8 @@ function conciseRunWarning(run: ArgusRun): string | null {
 }
 
 function Overview({ run }: { run: ArgusRun }) {
-  const finalAnswer = run.finalAnswer?.trim() ?? "";
   const facts = [
-    ["Score", run.score == null ? "—" : `${Math.round(run.score * 100)}%`],
+    ["Score", run.score == null ? "Not observed" : `${Math.round(run.score * 100)}%`],
     ["Tokens", formatNumber(run.caps.usedTokens, 0)],
     ["Duration", formatDuration(run.totals.latencyMs)],
     ["Cost", formatNumber(run.totals.normalizedCost, 0)]
@@ -62,14 +63,8 @@ function Overview({ run }: { run: ArgusRun }) {
   return (
     <header className="run-overview">
       <div className="run-title-block">
-        <div className="run-title-line"><h1 title={run.runId}>{displayRunId(run.runId)}</h1><div className="run-statuses"><StatusMark run={run} /><PortalMark run={run} /></div></div>
+        <div className="run-title-line"><div><small className="run-execution-id">Execution ID · <code title={run.runId}>{run.runId}</code></small><h1>{run.detail?.planTitle ?? displayRunId(run.runId)}</h1></div><div className="run-statuses"><StatusMark run={run} /><PortalMark run={run} /></div></div>
         {warning && <p className="run-failure-summary" role="alert"><TriangleAlert size={14} aria-hidden="true" /><span>{warning}</span></p>}
-        {finalAnswer ? <Collapsible.Root className="final-answer-collapsible">
-          <Collapsible.Trigger className="final-answer-trigger">
-            <span>Final answer</span><code>{finalAnswerPreview(run.finalAnswer)}</code><ChevronRight className="final-answer-icon" size={15} aria-hidden="true" />
-          </Collapsible.Trigger>
-          <Collapsible.Panel className="final-answer-panel"><pre>{run.finalAnswer}</pre></Collapsible.Panel>
-        </Collapsible.Root> : <div className="final-answer-empty"><span>Final answer</span><code>Not observed</code></div>}
       </div>
       <dl className="overview-facts" aria-label="Run summary">
         {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
@@ -128,28 +123,45 @@ function AuditDetails({ batch, item, loadedAt }: { batch: ArgusBatch; item: Argu
   );
 }
 
+function EmptyEvidenceState({ mockDataExcluded, onImport }: { mockDataExcluded: boolean; onImport: () => void }) {
+  return (
+    <section className="trace-empty" aria-labelledby="empty-evidence-title">
+      <span className="trace-empty-icon"><Import size={22} aria-hidden="true" /></span>
+      <div>
+        <p className="eyebrow">Run detail</p>
+        <h1 id="empty-evidence-title">No evidence loaded</h1>
+        <p>{mockDataExcluded ? "Mock data is excluded. Include it again or import a compatible ARGUS run JSON file." : "Import a compatible ARGUS run JSON file to inspect its execution evidence."}</p>
+        <UiButton type="button" onClick={onImport}><Import size={15} aria-hidden="true" />Import evidence</UiButton>
+      </div>
+    </section>
+  );
+}
+
 function AppContent() {
   const initialLoadedAt = useRef(new Date().toISOString());
-  const [batches, setBatches] = useState<ArgusBatch[]>(demoBatches);
+  const [importedBatches, setImportedBatches] = useState<ArgusBatch[]>([]);
+  const [includeMockData, setIncludeMockData] = useState(true);
+  const batches = useMemo(() => includeMockData ? [...importedBatches, ...demoBatches] : importedBatches, [importedBatches, includeMockData]);
+  const portalReports = capturedPortalReports;
   const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries(demoRuns.map((item) => [item.runId, initialLoadedAt.current])));
   const [selectedBatchId, setSelectedBatchId] = useState(demoBatches[0]!.batchId);
   const [selectedRunId, setSelectedRunId] = useState(initialDemoRun.runId);
-  const [selectedCompareReportId, setSelectedCompareReportId] = useState(demoPortalReports[0]?.reportId ?? "");
+  const [selectedCompareReportId, setSelectedCompareReportId] = useState(capturedPortalReports[0]?.reportId ?? "");
   const [view, setView] = useState<View>("compare");
   const [progress, setProgress] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(initialDemoRun.events.at(-1)!.eventId);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(traceCallSpans(initialDemoRun).at(-1)?.event.eventId ?? null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const toastManager = Toast.useToastManager();
-  const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0]!;
-  const item = batch.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch.items[0]!;
-  const run = item.trace;
+  const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0] ?? null;
+  const item = batch?.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch?.items[0] ?? null;
+  const run = item?.trace ?? initialDemoRun;
   const latestItems = useMemo(() => batches.flatMap((candidateBatch) => candidateBatch.items.map((candidateItem) => ({ batch: candidateBatch, item: candidateItem }))).sort((a, b) => runTimestamp(b.item.trace) - runTimestamp(a.item.trace)), [batches]);
-  const compareSelectionIndex = Math.max(0, demoPortalReports.findIndex((report) => report.reportId === selectedCompareReportId));
-  const activeListIndex = latestItems.length ? compareSelectionIndex % latestItems.length : -1;
-  const revealed = useMemo(() => visibleEvents(run.events, progress, timelineDuration(run)), [run, progress]);
+  const compareSelectionIndex = portalReports.findIndex((report) => report.reportId === selectedCompareReportId);
+  const activeListIndex = latestItems.length && compareSelectionIndex >= 0 ? compareSelectionIndex % latestItems.length : -1;
+  const revealed = useMemo(() => visibleTraceCallEvents(run, progress), [run, progress]);
   const selectedEvent = run.events.find((event) => event.eventId === selectedEventId) ?? revealed.at(-1) ?? null;
 
   useEffect(() => {
@@ -166,9 +178,16 @@ function AppContent() {
   }, [playing, speed]);
 
   useEffect(() => {
-    const latest = visibleEvents(run.events, progress, timelineDuration(run)).at(-1);
+    const latest = visibleTraceCallEvents(run, progress).at(-1);
     if (playing && latest) setSelectedEventId(latest.eventId);
   }, [playing, progress, run]);
+
+  useEffect(() => {
+    if (!item) {
+      setPlaying(false);
+      setEvidenceOpen(false);
+    }
+  }, [item]);
 
   function activateRun(batchId: string, id: string) {
     const nextBatch = batches.find((candidate) => candidate.batchId === batchId);
@@ -179,7 +198,7 @@ function AppContent() {
     setSelectedRunId(id);
     setProgress(1);
     setPlaying(false);
-    setSelectedEventId(next.events.at(-1)?.eventId ?? null);
+    setSelectedEventId(traceCallSpans(next).at(-1)?.event.eventId ?? null);
     setEvidenceOpen(false);
     setView("details");
   }
@@ -193,9 +212,24 @@ function AppContent() {
       openCompare();
       return;
     }
-    const linkedReport = demoPortalReports[listIndex % demoPortalReports.length];
+    const linkedReport = portalReports.length > 0 ? portalReports[listIndex % portalReports.length] : undefined;
     if (linkedReport) setSelectedCompareReportId(linkedReport.reportId);
     activateRun(batchId, id);
+  }
+
+  function selectRunForComparison(listIndex: number) {
+    const linkedReport = portalReports[listIndex % portalReports.length];
+    if (!linkedReport) return;
+    setSelectedCompareReportId(linkedReport.reportId);
+    setPlaying(false);
+    setEvidenceOpen(false);
+    setView("compare");
+  }
+
+  function toggleMockData() {
+    setPlaying(false);
+    setEvidenceOpen(false);
+    setIncludeMockData((current) => !current);
   }
 
   async function importEvidence(file: File) {
@@ -206,13 +240,13 @@ function AppContent() {
       const first = incoming[0]!;
       const loadedAt = new Date().toISOString();
       const importedBatch = makeImportedBatch(incoming, loadedAt);
-      setBatches((current) => [importedBatch, ...current.filter((existing) => existing.batchId !== importedBatch.batchId)]);
+      setImportedBatches((current) => [importedBatch, ...current.filter((existing) => existing.batchId !== importedBatch.batchId)]);
       setLoadedAtByRunId((current) => ({ ...current, ...Object.fromEntries(incoming.map((item) => [item.runId, loadedAt])) }));
       setSelectedBatchId(importedBatch.batchId);
       setSelectedRunId(first.runId);
       setProgress(1);
       setPlaying(false);
-      setSelectedEventId(first.events.at(-1)?.eventId ?? null);
+      setSelectedEventId(traceCallSpans(first).at(-1)?.event.eventId ?? null);
       setEvidenceOpen(false);
       setView("details");
       toastManager.add({ title: "Evidence imported", description: `${incoming.length} run${incoming.length === 1 ? "" : "s"} added.` });
@@ -231,19 +265,20 @@ function AppContent() {
         <section className="run-index" aria-labelledby="run-index-title">
           <div className="run-index-head"><strong id="run-index-title">Runs</strong><small>{latestItems.length}</small></div>
           <ol>
+            {latestItems.length === 0 && <li className="run-index-empty">No imported runs</li>}
             {latestItems.map(({ batch: candidateBatch, item: candidateItem }, listIndex) => {
               const candidate = candidateItem.trace;
               const active = listIndex === activeListIndex;
-              const detailOpen = view === "details" && candidate.runId === run.runId && candidateBatch.batchId === batch.batchId;
+              const detailOpen = view === "details" && candidate.runId === run.runId && candidateBatch.batchId === batch?.batchId;
               const failed = Boolean(candidate.failure) || candidate.status === "failed" || candidate.status === "capped";
               const listStatus = candidate.outcome !== "graded" && candidate.outcome !== "unknown" ? candidate.outcome : candidate.status;
               const StateIcon = failed ? TriangleAlert : CheckCircle2;
               return <li key={`${candidateBatch.batchId}:${candidate.runId}`}>
                 <div className={`run-index-item ${active ? "is-active" : ""} ${failed ? "is-failed" : ""}`}>
-                  <span className="run-index-copy">
+                  <button type="button" className="run-index-copy" aria-label={`Select ${displayRunId(candidate.runId)} for comparison`} aria-pressed={active} onClick={() => selectRunForComparison(listIndex)}>
                     <span className="run-index-title"><strong>{displayRunId(candidate.runId)}</strong><span className={`run-index-status ${failed ? "is-failed" : "is-success"}`} role="img" aria-label={listStatus.replaceAll("_", " ")}><StateIcon size={14} aria-hidden="true" /></span></span>
                     <time dateTime={candidate.events.at(-1)?.timestamp ?? candidate.importedAt}>{runClock(candidate)}</time>
-                  </span>
+                  </button>
                   <button type="button" className={`run-index-open ${detailOpen ? "is-open" : ""}`} aria-label={detailOpen ? `Close ${displayRunId(candidate.runId)} run detail` : `Open ${displayRunId(candidate.runId)} run detail`} aria-pressed={detailOpen} onClick={() => toggleRunDetail(candidateBatch.batchId, candidate.runId, listIndex)}>{detailOpen ? <ChevronLeft size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}</button>
                 </div>
               </li>;
@@ -257,11 +292,12 @@ function AppContent() {
           <div className="topbar-context"><strong>{view === "compare" ? "Compare runs" : "Run detail"}</strong></div>
           <div className="topbar-actions">
             <input ref={inputRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEvidence(file); event.target.value = ""; }} />
+            <UiIconButton type="button" label={includeMockData ? "Exclude mock data" : "Include mock data"} className="mock-data-toggle" aria-pressed={includeMockData} data-state={includeMockData ? "included" : "excluded"} onClick={toggleMockData}><FlaskConical size={16} aria-hidden="true" /></UiIconButton>
             <UiButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import evidence</UiButton>
           </div>
         </div>
 
-        {view === "details" ? <>
+        {view === "details" ? (batch && item ? <>
           <div className="view-stage run-detail-stage">
             <Overview run={run} />
             <div className="trace-layout">
@@ -269,8 +305,9 @@ function AppContent() {
               <Inspector event={selectedEvent} open={evidenceOpen} onOpenChange={setEvidenceOpen} />
             </div>
             <AuditDetails batch={batch} item={item} loadedAt={loadedAtByRunId[run.runId] ?? run.importedAt} />
+            <RunResultDetails run={run} />
           </div>
-        </> : <div className="view-stage compare-stage"><Suspense fallback={<div className="compare-loading">Loading Run space…</div>}><CompareRuns reports={demoPortalReports} selectedId={selectedCompareReportId} onSelectedIdChange={setSelectedCompareReportId} /></Suspense></div>}
+        </> : <div className="view-stage run-detail-stage"><EmptyEvidenceState mockDataExcluded={!includeMockData} onImport={() => inputRef.current?.click()} /></div>) : <div className="view-stage compare-stage"><Suspense fallback={<div className="compare-loading">Loading Run space…</div>}><CompareRuns reports={portalReports} selectedId={selectedCompareReportId} onSelectedIdChange={setSelectedCompareReportId} /></Suspense></div>}
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { Scatter3DChart } from "echarts-gl/charts";
 import { Grid3DComponent } from "echarts-gl/components";
 import { Box, ChevronLeft, ChevronRight, Info } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { PortalBatchRunReport, Track } from "../types.ts";
 import { formatDuration, formatNumber, notGradedItems, portalTokenEfficiency } from "../derive.ts";
 
@@ -78,6 +78,10 @@ function postedClock(value: string): string {
   return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(value));
 }
 
+function compactAxisNumber(value: number): string {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
 function timelineClock(value: number | Date): string {
   return new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(value));
 }
@@ -95,7 +99,7 @@ function makeScatterData(reports: PortalBatchRunReport[]): ScatterDatum[] {
     name: report.runName,
     reportId: report.reportId,
     testedAt: report.postedAt,
-    value: [portalTokenEfficiency(report), requestTotal(report), report.score * 100],
+    value: [portalTokenEfficiency(report), report.tokens.total, report.score * 100],
     totalTokens: report.tokens.total
   }));
 }
@@ -166,7 +170,7 @@ function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunRe
         temporalSuperSampling: { enable: true }
       },
       xAxis3D: { ...axisCommon, name: "EFFICIENCY", nameGap: 30, axisLabel: { ...axisLabel, formatter: (value: number) => value.toFixed(1) } },
-      yAxis3D: { ...axisCommon, name: "MODEL CALLS", nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}` } },
+      yAxis3D: { ...axisCommon, name: "TOTAL TOKENS", nameGap: 22, axisLabel: { ...axisLabel, formatter: compactAxisNumber } },
       zAxis3D: { ...axisCommon, name: "BENCH", max: 70, nameGap: 22, axisLabel: { ...axisLabel, formatter: (value: number) => `${Math.round(value)}%` } },
       series: [
         {
@@ -218,11 +222,11 @@ function RunSpace({ reports, selectedId, onSelect }: { reports: PortalBatchRunRe
   return (
     <section className="run-space" aria-label="Run performance space">
       <div className="run-space-viewport">
-        <div ref={chartElement} className="run-space-canvas" role="img" aria-label="3D Run comparison by efficiency, model calls, and bench score" />
+        <div ref={chartElement} className="run-space-canvas" role="img" aria-label="3D Run comparison by efficiency, total tokens, and bench score" />
         <dl className="run-space-selection-stats" aria-label={`Selected run statistics for ${selected.runName}`}>
           <div><dt>Bench</dt><dd>{(selected.score * 100).toFixed(1)}%</dd></div>
           <div><dt>Efficiency</dt><dd>{portalTokenEfficiency(selected).toFixed(2)}</dd></div>
-          <div><dt>Model calls</dt><dd>{formatNumber(requestTotal(selected), 0)}</dd></div>
+          <div><dt>Total tokens</dt><dd>{formatNumber(selected.tokens.total, 2)}</dd></div>
         </dl>
         <nav className="run-space-switcher" aria-label="Selected run navigation">
           <button type="button" className="run-space-switch" onClick={() => previous && onSelect(previous.reportId)} disabled={!previous} aria-label={previous ? `Previous run: ${previous.runName}` : "No previous run"}>
@@ -266,7 +270,19 @@ function timelineTooltip(point: TimelinePoint): string {
   return `<div class="chart-tooltip"><strong>${escapeHtml(point.runName)}</strong><span>${timelineClock(point.timestamp)} UTC</span><dl><div><dt>Bench score</dt><dd>${point.score.toFixed(1)}%</dd></div><div><dt>Coding</dt><dd>${point.codingAccuracy.toFixed(1)}%</dd></div><div><dt>Math</dt><dd>${point.mathAccuracy.toFixed(1)}%</dd></div><div><dt>Generic</dt><dd>${point.genericAccuracy.toFixed(1)}%</dd></div></dl></div>`;
 }
 
-function AllRunsStats({ reports }: { reports: PortalBatchRunReport[] }) {
+function selectTimelineRun(event: ReactMouseEvent<HTMLDivElement>, data: TimelinePoint[], onSelect: (reportId: string) => void) {
+  if (data.length === 0) return;
+  const marginLeft = 42;
+  const marginRight = 10;
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const plotWidth = bounds.width - marginLeft - marginRight;
+  const plotX = event.clientX - bounds.left - marginLeft;
+  if (plotWidth <= 0 || plotX < 0 || plotX > plotWidth) return;
+  const index = Math.min(data.length - 1, Math.floor((plotX / plotWidth) * data.length));
+  onSelect(data[index]!.reportId);
+}
+
+function AllRunsStats({ reports, onSelect }: { reports: PortalBatchRunReport[]; onSelect: (reportId: string) => void }) {
   const data = useMemo(() => timelineData(reports), [reports]);
   const scoreAccessors = [(point: TimelinePoint) => point.coding, (point: TimelinePoint) => point.math, (point: TimelinePoint) => point.generic];
   const timeAt = (value: number | Date) => timelineClock(data[Math.max(0, Math.round(Number(value)))]?.timestamp ?? data[0]!.timestamp);
@@ -275,7 +291,7 @@ function AllRunsStats({ reports }: { reports: PortalBatchRunReport[] }) {
     <section className="all-runs-stats" aria-label="All Run statistics">
       <article className="timeline-chart timeline-chart-score">
         <div className="timeline-chart-head"><h2>Bench scores</h2><div className="timeline-legend"><span><i style={{ background: trackColors.coding }} />Coding 2×</span><span><i style={{ background: trackColors.math }} />Math 1×</span><span><i style={{ background: trackColors.generic }} />Generic 1×</span></div></div>
-        <div className="unovis-chart timeline-main-chart">
+        <div className="unovis-chart timeline-main-chart timeline-selectable" onClick={(event) => selectTimelineRun(event, data, onSelect)}>
           <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, 70]}>
             <VisStackedBar<TimelinePoint> x={(point) => point.index} y={scoreAccessors} color={[trackColors.coding, trackColors.math, trackColors.generic]} dataStep={joinedBarStep} barPadding={0} roundedCorners={0} duration={700} />
             <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
@@ -287,7 +303,7 @@ function AllRunsStats({ reports }: { reports: PortalBatchRunReport[] }) {
       </article>
       <article className="timeline-chart">
         <div className="timeline-chart-head"><h2>Token efficiency</h2><span>score / 1M tokens</span></div>
-        <div className="unovis-chart">
+        <div className="unovis-chart timeline-selectable" onClick={(event) => selectTimelineRun(event, data, onSelect)}>
           <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, undefined]}>
             <VisLine<TimelinePoint> x={(point) => point.index} y={(point) => point.efficiency} color="#6c3ff2" lineWidth={3} duration={700} />
             <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
@@ -299,7 +315,7 @@ function AllRunsStats({ reports }: { reports: PortalBatchRunReport[] }) {
       </article>
       <article className="timeline-chart">
         <div className="timeline-chart-head"><h2>Model calls</h2><span>requests</span></div>
-        <div className="unovis-chart">
+        <div className="unovis-chart timeline-selectable" onClick={(event) => selectTimelineRun(event, data, onSelect)}>
           <VisXYContainer<TimelinePoint> data={data} height={216} margin={{ top: 14, right: 10, bottom: 44, left: 42 }} xDomain={[-0.5, Math.max(0.5, data.length - 0.5)]} yDomain={[0, undefined]}>
             <VisStackedBar<TimelinePoint> x={(point) => point.index} y={[(point) => point.calls]} color="#abc929" dataStep={joinedBarStep} barPadding={0} roundedCorners={0} duration={700} />
             <VisAxis<TimelinePoint> type="x" tickValues={data.map((point) => point.index)} tickFormat={timeAt} tickTextFontSize="8px" tickTextWidth={38} tickTextAngle={-35} gridLine={false} />
@@ -368,7 +384,7 @@ function SelectedRunStats({ report }: { report: PortalBatchRunReport }) {
   return (
     <section className="selected-run portal-report compare-selected-panel" aria-labelledby="selected-run-title">
       <header className="selected-run-head">
-        <div><h2 id="selected-run-title">{report.runName}</h2><p>{formatDuration(report.executionTimeMs)} · {postedClock(report.evidence.receivedAt)} UTC</p></div>
+        <div><h2 id="selected-run-title">{report.runName}</h2><p>{formatDuration(report.executionTimeMs)} · {postedClock(report.evidence.receivedAt ?? report.postedAt)} UTC</p></div>
         <span className={`status-mark status-${report.status}`}>{report.status}</span>
       </header>
 
@@ -387,7 +403,7 @@ export function CompareRuns({ reports, selectedId, onSelectedIdChange }: { repor
   return (
     <div className="analysis-page compare-runs-page">
       <div className="compare-workbench"><RunSpace reports={reports} selectedId={selected.reportId} onSelect={onSelectedIdChange} /><SelectedRunStats report={selected} /></div>
-      <AllRunsStats reports={reports} />
+      <AllRunsStats reports={reports} onSelect={onSelectedIdChange} />
     </div>
   );
 }

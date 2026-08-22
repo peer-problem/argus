@@ -3,7 +3,7 @@ import { Tabs } from "@base-ui/react/tabs";
 import { Braces, ChevronRight, FileText, Timer, Waypoints } from "lucide-react";
 import { useState } from "react";
 import type { ArgusEvent } from "../types.ts";
-import { formatDuration, formatNumber } from "../derive.ts";
+import { formatDuration, formatNumber, tokenTotal } from "../derive.ts";
 
 function eventTitle(event: ArgusEvent): string {
   if (event.kind === "run.created") return "Run accepted";
@@ -15,7 +15,13 @@ function eventTitle(event: ArgusEvent): string {
   if (event.kind === "run.completed") return "Run completed";
   if (event.kind === "run.failed") return "Run failed";
   if (event.kind === "run.capped") return "Run capped";
+  if (event.kind === "unknown" && typeof event.raw?.sourceEventType === "string") return event.raw.sourceEventType.replace(/^squad:/, "").replaceAll("-", " ");
   return event.kind.replace(".", " · ");
+}
+
+function rawString(event: ArgusEvent, key: string): string | null {
+  const value = event.raw?.[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 interface InspectorProps {
@@ -28,10 +34,18 @@ export function Inspector({ event, open, onOpenChange }: InspectorProps) {
   const [mode, setMode] = useState<"fields" | "source">("fields");
   if (!event) return <section className="event-evidence empty-event-evidence"><Waypoints size={18} aria-hidden="true" /><p>Select an event to inspect its evidence.</p></section>;
   const protocol = typeof event.raw?.protocol === "string" ? event.raw.protocol : "Recorded in imported JSON";
+  const sourceEventType = rawString(event, "sourceEventType");
+  const joinConfidence = rawString(event, "joinConfidence");
+  const joinReason = rawString(event, "joinReason");
+  const agentState = rawString(event, "agentState");
   const fields = [
     { label: "Occurred", value: event.timestamp },
     { label: "Protocol", value: protocol },
+    { label: "Event type", value: sourceEventType },
+    { label: "Join", value: joinConfidence },
+    { label: "Join evidence", value: joinReason },
     { label: "Actor", value: event.agentId },
+    { label: "Agent state", value: agentState },
     { label: "Model", value: event.model?.split("/").at(-1) },
     { label: "Task", value: event.taskTitle },
     { label: "Wave", value: event.wave == null ? null : String(event.wave + 1).padStart(2, "0") }
@@ -57,7 +71,7 @@ export function Inspector({ event, open, onOpenChange }: InspectorProps) {
               {fields.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd title={value}>{value}</dd></div>)}
             </dl>
             <div className="event-evidence-metrics">
-              <div><FileText size={14} aria-hidden="true" /><span>Tokens</span><strong>{formatNumber(event.tokens.input + event.tokens.output)}</strong></div>
+              <div><FileText size={14} aria-hidden="true" /><span>Tokens</span><strong>{formatNumber(tokenTotal(event.tokens))}</strong></div>
               <div><Timer size={14} aria-hidden="true" /><span>Duration</span><strong>{formatDuration(event.durationMs)}</strong></div>
             </div>
             <Collapsible.Root className="advanced-evidence">
