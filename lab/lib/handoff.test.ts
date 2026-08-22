@@ -15,6 +15,7 @@ describe("handoff readiness", () => {
     expect(report.deferredExternalValidation.map((entry) => entry.gate)).toEqual([
       "requestByteGate",
       "sweFidelityGate",
+      "submissionBindingGate",
       "capGate",
       "formatGate"
     ]);
