@@ -228,7 +228,14 @@ export function ExecutionTrace({ run, selectedEventId, progress, playing, speed,
       <div className="trace-controls">
         <div className="trace-control-copy"><CircleGauge size={15} aria-hidden="true" /><span>Position</span><strong>{formatDuration(progress * duration)}</strong></div>
         <UiIconButton type="button" label="Restart replay" onClick={() => { onPlaying(false); onProgress(0); }}><RotateCcw size={16} aria-hidden="true" /></UiIconButton>
-        <UiButton type="button" variant="primary" onClick={() => onPlaying(!playing)}>{playing ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />} {playing ? "Pause" : "Replay"}</UiButton>
+        <UiButton type="button" variant="primary" onClick={() => {
+          if (playing) {
+            onPlaying(false);
+            return;
+          }
+          if (progress >= 1) onProgress(0);
+          onPlaying(true);
+        }}>{playing ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />} {playing ? "Pause" : "Replay"}</UiButton>
         <UiSlider label="Timeline position" value={Math.round(progress * 100)} onValueChange={(value) => onProgress(value / 100)} />
         <UiSelect className="speed-control" label="Speed" value={String(speed)} onValueChange={(value) => onSpeed(Number(value))} options={[
           { value: "0.5", label: "0.5×" }, { value: "1", label: "1×" }, { value: "2", label: "2×" }, { value: "4", label: "4×" }
