@@ -1,6 +1,8 @@
 export type Track = "coding" | "math" | "generic" | "unknown";
 export type RunStatus = "queued" | "running" | "completed" | "failed" | "capped" | "unknown";
 export type EventState = "queued" | "planning" | "running" | "completed" | "failed" | "capped" | "unknown";
+/** `null` means the source did not collect this measurement; it is never a stand-in for zero. */
+export type ObservedNumber = number | null;
 
 export type EventKind =
   | "run.created"
@@ -20,11 +22,11 @@ export type EventKind =
   | "unknown";
 
 export interface TokenUsage {
-  input: number;
-  output: number;
-  reasoning: number;
-  cachedInput: number;
-  normalizedCost: number;
+  input: ObservedNumber;
+  output: ObservedNumber;
+  reasoning: ObservedNumber;
+  cachedInput: ObservedNumber;
+  normalizedCost: ObservedNumber;
 }
 
 export interface ArgusEvent {
@@ -45,7 +47,7 @@ export interface ArgusEvent {
   artifactRef?: string | null;
   candidateStatus?: "selected" | "rejected" | "observed" | "none";
   tokens: TokenUsage;
-  durationMs: number;
+  durationMs: ObservedNumber;
   squadConfigHash?: string | null;
   submissionJsonHash?: string | null;
   promptHash?: string | null;
@@ -55,9 +57,52 @@ export interface ArgusEvent {
 
 export interface ModelUsage extends TokenUsage {
   model: string;
-  calls: number;
-  latencyMs: number;
+  calls: ObservedNumber;
+  latencyMs: ObservedNumber;
   contextWindowTokens?: number | null;
+}
+
+export interface ArgusRunTaskDetail {
+  taskId: string;
+  title: string;
+  agentId: string | null;
+  agentName: string | null;
+  status: string;
+  output: string | null;
+  error: string | null;
+  durationMs: ObservedNumber;
+  tokens: Pick<TokenUsage, "input" | "output">;
+  priority: string | null;
+  description: string | null;
+  createdBy: string | null;
+  dependsOnTaskIds: string[];
+  artifacts: string[];
+  result: string | null;
+  retryCount: ObservedNumber;
+  maxRetries: ObservedNumber;
+  startedAt: string | null;
+  completedAt: string | null;
+  markdown: string | null;
+}
+
+export interface ArgusRunConsoleEntry {
+  timestamp: string;
+  level: string;
+  agentId: string;
+  message: string;
+}
+
+export interface ArgusRunDetail {
+  executionId: string;
+  squadId: string | null;
+  squadName: string | null;
+  request: string | null;
+  planTitle: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  tasks: ArgusRunTaskDetail[];
+  console: ArgusRunConsoleEntry[];
+  reportMarkdown: string | null;
 }
 
 export interface ArgusRun {
@@ -65,7 +110,7 @@ export interface ArgusRun {
   portalRunId?: string | null;
   source: "portal" | "aigo" | "merged" | "demo";
   track: Track;
-  dataset: string;
+  dataset: string | null;
   itemId?: string | null;
   status: RunStatus;
   score: number | null;
@@ -81,14 +126,15 @@ export interface ArgusRun {
   caps: {
     runTokens: number | null;
     itemWallclockSeconds: number | null;
-    usedTokens: number;
-    elapsedMs: number;
+    usedTokens: ObservedNumber;
+    elapsedMs: ObservedNumber;
   };
-  totals: TokenUsage & { latencyMs: number };
+  totals: TokenUsage & { latencyMs: ObservedNumber };
   modelUsage: ModelUsage[];
   hashes: Record<string, string | null>;
   compliance: Record<string, boolean | null>;
   events: ArgusEvent[];
+  detail?: ArgusRunDetail | null;
   rawEvidenceRefs: string[];
   importedAt: string;
 }
@@ -177,8 +223,8 @@ export interface PortalBatchRunReport {
   modelUsage: PortalModelUsage[];
   trackResults: PortalTrackResult[];
   evidence: {
-    protocol: "Run-details JSON export";
-    receivedAt: string;
+    protocol: "Run-details JSON export" | "Portal run detail capture";
+    receivedAt: string | null;
     reference: string;
   };
 }

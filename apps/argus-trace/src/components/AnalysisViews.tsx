@@ -1,22 +1,29 @@
 import { AlertTriangle, Check, CircleAlert, Gauge, ShieldCheck, X } from "lucide-react";
 import type { ArgusBatchItem, ArgusRun } from "../types.ts";
-import { capShare, complianceScore, formatDuration, formatNumber } from "../derive.ts";
+import { capShare, complianceScore, formatDuration, formatNumber, tokenTotal } from "../derive.ts";
 import { dataArrivalsFor } from "../data/demo.ts";
 import { UiProgress } from "./ui/Controls.tsx";
 
 export function TokenFlow({ run }: { run: ArgusRun }) {
-  const total = Math.max(1, run.totals.input + run.totals.output);
-  const cached = Math.min(run.totals.cachedInput, run.totals.input);
-  const fresh = run.totals.input - cached;
+  const total = tokenTotal(run.totals);
+  const { input, output, cachedInput } = run.totals;
+  if (total == null || input == null || output == null || cachedInput == null) return (
+    <section className="analysis-section token-flow" aria-labelledby="token-title">
+      <div className="section-heading"><h2 id="token-title">Token usage</h2><strong>{formatNumber(total, 0)} total</strong></div>
+      <p className="token-flow-empty">Input/cache breakdown was not observed. Input <strong>{formatNumber(input, 0)}</strong> · Output <strong>{formatNumber(output, 0)}</strong> · Cached <strong>{formatNumber(cachedInput, 0)}</strong></p>
+    </section>
+  );
+  const cached = Math.min(cachedInput, input);
+  const fresh = input - cached;
   return (
     <section className="analysis-section token-flow" aria-labelledby="token-title">
       <div className="section-heading"><h2 id="token-title">Token usage</h2><strong>{formatNumber(total, 0)} total</strong></div>
-      <div className="token-bar" aria-label={`${fresh} fresh input, ${cached} cached input, ${run.totals.output} output`}>
+      <div className="token-bar" aria-label={`${fresh} fresh input, ${cached} cached input, ${output} output`}>
         <span className="fresh" style={{ width: `${(fresh / total) * 100}%` }} />
         <span className="cached" style={{ width: `${(cached / total) * 100}%` }} />
-        <span className="output" style={{ width: `${(run.totals.output / total) * 100}%` }} />
+        <span className="output" style={{ width: `${(output / total) * 100}%` }} />
       </div>
-      <div className="token-legend"><span><i className="fresh" />Fresh input <strong>{formatNumber(fresh, 0)}</strong></span><span><i className="cached" />Cached <strong>{formatNumber(cached, 0)}</strong></span><span><i className="output" />Output <strong>{formatNumber(run.totals.output, 0)}</strong></span></div>
+      <div className="token-legend"><span><i className="fresh" />Fresh input <strong>{formatNumber(fresh, 0)}</strong></span><span><i className="cached" />Cached <strong>{formatNumber(cached, 0)}</strong></span><span><i className="output" />Output <strong>{formatNumber(output, 0)}</strong></span></div>
     </section>
   );
 }
@@ -68,11 +75,11 @@ export function RunSignals({ run }: { run: ArgusRun }) {
     <section className="run-signals" aria-label="Run diagnostics">
       <article className={`signal-card ${share != null && share > .85 ? "is-danger" : ""}`}>
         <div className="signal-head"><h2>Caps</h2><Gauge size={18} aria-hidden="true" /></div>
-        <div className="signal-number"><strong>{share == null ? "—" : `${Math.round(share * 100)}%`}</strong><span>token cap used</span></div>
+        <div className="signal-number"><strong>{share == null ? "Not observed" : `${Math.round(share * 100)}%`}</strong><span>token cap used</span></div>
         <UiProgress label="Token cap usage" value={capPercent} tone={capPercent != null && capPercent > 85 ? "danger" : capPercent == null ? "muted" : "default"} />
         <dl className="signal-facts">
           <div><dt>Observed</dt><dd>{formatNumber(run.caps.usedTokens, 0)}</dd></div>
-          <div><dt>Limit</dt><dd>{run.caps.runTokens == null ? "Unknown" : formatNumber(run.caps.runTokens, 0)}</dd></div>
+          <div><dt>Limit</dt><dd>{run.caps.runTokens == null ? "Not observed" : formatNumber(run.caps.runTokens, 0)}</dd></div>
           <div><dt>Elapsed</dt><dd>{formatDuration(run.caps.elapsedMs)}</dd></div>
           <div><dt>Wall-clock</dt><dd>{run.caps.itemWallclockSeconds == null ? "Unknown" : `${run.caps.itemWallclockSeconds}s`}</dd></div>
         </dl>

@@ -1,10 +1,16 @@
-import type { ArgusEvent, ArgusRun, PortalBatchRunReport } from "./types.ts";
+import type { ArgusEvent, ArgusRun, ObservedNumber, PortalBatchRunReport, TokenUsage } from "./types.ts";
 
-export function formatNumber(value: number, maximumFractionDigits = 1): string {
+export function isObservedNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+export function formatNumber(value: ObservedNumber | undefined, maximumFractionDigits = 1): string {
+  if (!isObservedNumber(value)) return "Not observed";
   return new Intl.NumberFormat("en-US", { notation: value >= 100_000 ? "compact" : "standard", maximumFractionDigits }).format(value);
 }
 
-export function formatDuration(ms: number): string {
+export function formatDuration(ms: ObservedNumber | undefined): string {
+  if (!isObservedNumber(ms)) return "Not observed";
   if (ms < 1_000) return `${Math.round(ms)} ms`;
   if (ms < 60_000) return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)} s`;
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1_000)}s`;
@@ -27,18 +33,36 @@ function eventTimelineOrigin(events: ArgusEvent[]): number {
   return events.reduce((earliest, event) => Math.min(earliest, eventTimestamp(event)), Number.POSITIVE_INFINITY);
 }
 
+function runTimelineOrigin(run: ArgusRun): number {
+  const startedAt = run.detail?.startedAt == null ? Number.NaN : new Date(run.detail.startedAt).valueOf();
+  return Number.isFinite(startedAt) ? startedAt : eventTimelineOrigin(run.events);
+}
+
 export function timelineDuration(run: ArgusRun): number {
-  const origin = eventTimelineOrigin(run.events);
+  const origin = runTimelineOrigin(run);
   const observedDuration = Number.isFinite(origin)
     ? Math.max(0, ...run.events.map((event) => eventTimestamp(event) - origin))
     : 0;
-  return Math.max(1, run.totals.latencyMs, observedDuration);
+  const completedAt = run.detail?.completedAt == null ? Number.NaN : new Date(run.detail.completedAt).valueOf();
+  const executionWindow = Number.isFinite(origin) && Number.isFinite(completedAt) ? Math.max(0, completedAt - origin) : 0;
+  if (executionWindow > 0) return executionWindow;
+  return Math.max(1, run.totals.latencyMs ?? 0, observedDuration);
 }
 
-export function visibleEvents(events: ArgusEvent[], progress: number, durationMs?: number): ArgusEvent[] {
+/** Returns no total when one of the source measurements needed for it is absent. */
+export function observedSum(...values: ObservedNumber[]): number | null {
+  return values.every(isObservedNumber) ? values.reduce((total, value) => total + value, 0) : null;
+}
+
+export function tokenTotal(usage: Pick<TokenUsage, "input" | "output">): number | null {
+  return observedSum(usage.input, usage.output);
+}
+
+export function visibleEvents(events: ArgusEvent[], progress: number, durationMs?: number, startedAt?: string | null): ArgusEvent[] {
   if (events.length === 0) return [];
   const ordered = [...events].sort((left, right) => eventTimestamp(left) - eventTimestamp(right));
-  const origin = eventTimestamp(ordered[0]!);
+  const requestedOrigin = startedAt == null ? Number.NaN : new Date(startedAt).valueOf();
+  const origin = Number.isFinite(requestedOrigin) ? requestedOrigin : eventTimestamp(ordered[0]!);
   const observedDuration = Math.max(0, eventTimestamp(ordered.at(-1)!) - origin);
   const duration = Math.max(0, durationMs ?? observedDuration);
   const playheadMs = Math.min(1, Math.max(0, progress)) * duration;
@@ -65,14 +89,15 @@ export function dependencyWaveCount(run: ArgusRun): number {
 }
 
 export function comparisonIsMatched(primary: ArgusRun, secondary: ArgusRun): boolean {
-  if (primary.score == null || secondary.score == null) return false;
+  if (primary.score == null || secondary.score == null || primary.dataset == null || secondary.dataset == null) return false;
   if (primary.track !== secondary.track || primary.dataset !== secondary.dataset) return false;
   return Boolean(primary.itemId && secondary.itemId && primary.itemId === secondary.itemId);
 }
 
-export function costEfficiencyIndex(run: ArgusRun, visibleRuns: ArgusRun[]): number {
-  const costs = visibleRuns.map((candidate) => candidate.totals.normalizedCost).filter(Number.isFinite);
-  if (costs.length === 0) return 0;
+export function costEfficiencyIndex(run: ArgusRun, visibleRuns: ArgusRun[]): number | null {
+  if (!isObservedNumber(run.totals.normalizedCost)) return null;
+  const costs = visibleRuns.map((candidate) => candidate.totals.normalizedCost).filter(isObservedNumber);
+  if (costs.length === 0) return null;
   const minimum = Math.min(...costs);
   const maximum = Math.max(...costs);
   if (minimum === maximum) return 100;
@@ -94,17 +119,64 @@ export function notGradedItems(report: PortalBatchRunReport): number {
 }
 
 export function capShare(run: ArgusRun): number | null {
-  return run.caps.runTokens ? run.caps.usedTokens / run.caps.runTokens : null;
+  return run.caps.runTokens && isObservedNumber(run.caps.usedTokens) ? run.caps.usedTokens / run.caps.runTokens : null;
 }
 
-export function cacheShare(run: ArgusRun): number {
-  return run.totals.input ? run.totals.cachedInput / run.totals.input : 0;
+export function cacheShare(run: ArgusRun): number | null {
+  return run.totals.input && isObservedNumber(run.totals.cachedInput) ? run.totals.cachedInput / run.totals.input : null;
 }
 
 export function eventStart(run: ArgusRun, event: ArgusEvent): number {
-  const origin = eventTimelineOrigin(run.events);
+  const origin = runTimelineOrigin(run);
   if (!Number.isFinite(origin)) return 0;
   return Math.max(0, eventTimestamp(event) - origin);
+}
+
+export interface TraceCallSpan {
+  event: ArgusEvent;
+  startMs: number;
+  endMs: number;
+  durationMs: number;
+}
+
+function previousEvent(run: ArgusRun, event: ArgusEvent, matches: (candidate: ArgusEvent) => boolean): ArgusEvent | null {
+  const timestamp = eventTimestamp(event);
+  return run.events
+    .filter((candidate) => candidate.eventId !== event.eventId && eventTimestamp(candidate) <= timestamp && matches(candidate))
+    .sort((left, right) => eventTimestamp(right) - eventTimestamp(left))[0] ?? null;
+}
+
+function isTraceCallAnchor(event: ArgusEvent): boolean {
+  if (event.kind === "plan.created" || event.kind === "task.completed" || event.kind === "task.failed") return true;
+  return event.model != null && ((tokenTotal(event.tokens) ?? 0) > 0 || (event.durationMs ?? 0) > 0);
+}
+
+/**
+ * Reduces the source event ledger into call spans for the primary timeline.
+ * Lifecycle records remain in `run.events` for the lower event-ledger viewer.
+ */
+export function traceCallSpans(run: ArgusRun): TraceCallSpan[] {
+  return run.events.filter(isTraceCallAnchor).map((event): TraceCallSpan => {
+    const endMs = eventStart(run, event);
+    let startMs = Math.max(0, endMs - (event.durationMs ?? 0));
+    if (event.kind === "plan.created") {
+      const planningStarted = previousEvent(run, event, (candidate) => candidate.kind === "run.started" && candidate.state === "planning");
+      if (planningStarted) startMs = eventStart(run, planningStarted);
+    } else if ((event.kind === "task.completed" || event.kind === "task.failed") && event.taskId != null) {
+      const taskStarted = previousEvent(run, event, (candidate) => candidate.kind === "task.started" && candidate.taskId === event.taskId);
+      if (taskStarted) startMs = eventStart(run, taskStarted);
+    }
+    startMs = Math.max(0, Math.min(startMs, endMs));
+    return { event, startMs, endMs, durationMs: Math.max(0, endMs - startMs) };
+  }).sort((left, right) => left.startMs - right.startMs || left.endMs - right.endMs || left.event.eventId.localeCompare(right.event.eventId));
+}
+
+export function visibleTraceCallEvents(run: ArgusRun, progress: number): ArgusEvent[] {
+  const calls = traceCallSpans(run);
+  if (calls.length === 0) return [];
+  const playheadMs = Math.min(1, Math.max(0, progress)) * timelineDuration(run);
+  const visible = calls.filter((call) => call.startMs <= playheadMs).map((call) => call.event);
+  return visible.length > 0 ? visible : [calls[0]!.event];
 }
 
 export function complianceScore(run: ArgusRun): { passed: number; known: number; total: number } {
