@@ -19,8 +19,56 @@ function report(value: ReportInput): PortalBatchRunReport {
   };
 }
 
-/** Portal reports transcribed from the two supplied ranked-run captures. */
+/** Portal reports transcribed from the supplied ranked-run captures. */
 export const addedPortalReports: PortalBatchRunReport[] = [
+  report({
+    reportId: "portal-limitedbeannoodle-hidden-1b3906fa-20260822-2354",
+    team: "LimitedBeanNoodle",
+    runName: "limitedbeannoodle-hidden-1b3906fa",
+    status: "completed",
+    score: 0.406,
+    scoredItems: 144,
+    totalItems: 147,
+    executionTimeMs: 774_000,
+    tokens: { input: 2_206_728, output: 560_932, total: 2_767_660 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T23:54:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/limitedbeannoodle-hidden-1b3906fa-20260822-2354",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 2_206_728, outputTokens: 560_932, requests: 566, totalTokens: 2_767_660 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.158, graded: 37, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.538, graded: 11, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.77, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
+  report({
+    reportId: "portal-noonchcoach-hidden-90825d8d-20260822-1918",
+    team: "Noonchcoach",
+    runName: "noonchcoach-hidden-90825d8d",
+    status: "completed",
+    score: 0.35,
+    scoredItems: 144,
+    totalItems: 147,
+    executionTimeMs: 524_000,
+    tokens: { input: 1_845_542, output: 423_809, total: 2_269_351 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T19:18:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/noonchcoach-hidden-90825d8d-20260822-1918",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 1_845_542, outputTokens: 423_809, requests: 539, totalTokens: 2_269_351 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.105, graded: 36, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.462, graded: 12, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.729, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
   report({
     reportId: "portal-couchpotato-hidden-c9f31618-20260822-1754",
     team: "CouchPotato",
