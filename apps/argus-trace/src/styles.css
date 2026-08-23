@@ -204,9 +204,6 @@ main { min-width: 0; }
 .batch-picker .ui-select-trigger { width: min(20rem, 28vw); border-color: var(--ui-color-line); }
 .run-picker .ui-select-trigger { width: min(20rem, 28vw); border-color: var(--ui-color-line); }
 .topbar-actions { display: flex; align-items: center; gap: var(--ui-space-2); }
-.mock-data-toggle[data-state="included"] { border-color: var(--ui-color-accent); background: var(--ui-color-accent-soft); color: var(--ui-color-accent); }
-.mock-data-toggle[data-state="included"]:hover:not([data-disabled]) { background: var(--ui-color-signal-soft); }
-.mock-data-toggle[data-state="excluded"] { color: var(--ui-color-ink-muted); }
 .demo-badge, .status-mark, .owner { display: inline-flex; align-items: center; gap: var(--ui-space-1); min-height: 1.5rem; padding: 0 var(--ui-space-2); border: var(--ui-border-width) solid currentColor; color: var(--ui-color-ink-muted); font-size: var(--ui-text-xs); line-height: 1; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 .demo-badge { color: var(--ui-color-warning); }
 .view-stage { width: min(100%, calc(var(--ui-layout-content) + 2 * var(--ui-layout-gutter))); margin: 0 auto; padding: 0 var(--ui-layout-gutter) var(--ui-space-12); outline: 0; }

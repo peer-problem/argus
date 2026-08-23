@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { CheckCircle2, ChevronLeft, ChevronRight, FlaskConical, GitCompareArrows, Import, TriangleAlert } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Import, TriangleAlert } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusRun } from "./types.ts";
 import { DataArrivalFlow, RunSignals, TokenFlow } from "./components/AnalysisViews.tsx";
@@ -9,10 +9,9 @@ import { isArgusRun } from "./contracts.ts";
 import { ExecutionTrace } from "./components/ExecutionTrace.tsx";
 import { Inspector } from "./components/Inspector.tsx";
 import { RunResultDetails } from "./components/RunResultDetails.tsx";
-import { UiButton, UiIconButton, UiToastViewport } from "./components/ui/Controls.tsx";
-import { capturedPortalBatch, capturedPortalRuns } from "./data/capturedPortalRuns.ts";
+import { UiButton, UiToastViewport } from "./components/ui/Controls.tsx";
 import { demoBatches, demoRuns, makeImportedBatch } from "./data/demo.ts";
-import { capturedPortalReports, demoLinkedPortalReports } from "./data/portalReports.ts";
+import { demoPortalReports } from "./data/portalReports.ts";
 import { capShare, formatDuration, formatNumber, taskCount, traceCallSpans, visibleTraceCallEvents } from "./derive.ts";
 
 type View = "details" | "compare";
@@ -43,17 +42,12 @@ function runClock(run: ArgusRun): string {
   return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(runTimestamp(run));
 }
 
-const comparisonReports = capturedPortalReports;
-const demoReportIdByRunId = new Map([...demoRuns]
-  .sort((a, b) => runTimestamp(b) - runTimestamp(a))
-  .map((run, index) => [run.runId, demoLinkedPortalReports[index]?.reportId]));
-const initialPortalRun = capturedPortalRuns[0]!;
+const comparisonReports = demoPortalReports;
+const initialDemoRun = demoRuns[0]!;
 
 function linkedComparisonReport(run: ArgusRun) {
   const direct = run.portalRunId == null ? undefined : comparisonReports.find((report) => report.reportId === run.portalRunId);
-  if (direct) return direct;
-  const demoReportId = run.source === "demo" ? demoReportIdByRunId.get(run.runId) : undefined;
-  return demoReportId == null ? undefined : comparisonReports.find((report) => report.reportId === demoReportId);
+  return direct;
 }
 
 function conciseRunWarning(run: ArgusRun): string | null {
@@ -135,14 +129,14 @@ function AuditDetails({ batch, item, loadedAt }: { batch: ArgusBatch; item: Argu
   );
 }
 
-function EmptyEvidenceState({ mockDataExcluded, onImport }: { mockDataExcluded: boolean; onImport: () => void }) {
+function EmptyEvidenceState({ onImport }: { onImport: () => void }) {
   return (
     <section className="trace-empty" aria-labelledby="empty-evidence-title">
       <span className="trace-empty-icon"><Import size={22} aria-hidden="true" /></span>
       <div>
         <p className="eyebrow">Run detail</p>
         <h1 id="empty-evidence-title">No evidence loaded</h1>
-        <p>{mockDataExcluded ? "Mock data is excluded. Include it again or import a compatible ARGUS run JSON file." : "Import a compatible ARGUS run JSON file to inspect its execution evidence."}</p>
+        <p>Import a compatible ARGUS run JSON file to inspect its execution evidence.</p>
         <UiButton type="button" onClick={onImport}><Import size={15} aria-hidden="true" />Import evidence</UiButton>
       </div>
     </section>
@@ -152,24 +146,23 @@ function EmptyEvidenceState({ mockDataExcluded, onImport }: { mockDataExcluded: 
 function AppContent() {
   const initialLoadedAt = useRef(new Date().toISOString());
   const [importedBatches, setImportedBatches] = useState<ArgusBatch[]>([]);
-  const [includeMockData, setIncludeMockData] = useState(true);
-  const batches = useMemo(() => includeMockData ? [...importedBatches, capturedPortalBatch, ...demoBatches] : [...importedBatches, capturedPortalBatch], [importedBatches, includeMockData]);
+  const batches = useMemo(() => [...importedBatches, ...demoBatches], [importedBatches]);
   const portalReports = comparisonReports;
-  const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries([...capturedPortalRuns, ...demoRuns].map((item) => [item.runId, initialLoadedAt.current])));
-  const [selectedBatchId, setSelectedBatchId] = useState(capturedPortalBatch.batchId);
-  const [selectedRunId, setSelectedRunId] = useState(initialPortalRun.runId);
-  const [selectedCompareReportId, setSelectedCompareReportId] = useState(initialPortalRun.portalRunId ?? "");
+  const [loadedAtByRunId, setLoadedAtByRunId] = useState<Record<string, string>>(() => Object.fromEntries(demoRuns.map((item) => [item.runId, initialLoadedAt.current])));
+  const [selectedBatchId, setSelectedBatchId] = useState(demoBatches[0]!.batchId);
+  const [selectedRunId, setSelectedRunId] = useState(initialDemoRun.runId);
+  const [selectedCompareReportId, setSelectedCompareReportId] = useState(initialDemoRun.portalRunId ?? "");
   const [view, setView] = useState<View>("compare");
   const [progress, setProgress] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(traceCallSpans(initialPortalRun).at(-1)?.event.eventId ?? null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(traceCallSpans(initialDemoRun).at(-1)?.event.eventId ?? null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const toastManager = Toast.useToastManager();
   const batch = batches.find((candidate) => candidate.batchId === selectedBatchId) ?? batches[0] ?? null;
   const item = batch?.items.find((candidate) => candidate.trace.runId === selectedRunId) ?? batch?.items[0] ?? null;
-  const run = item?.trace ?? initialPortalRun;
+  const run = item?.trace ?? initialDemoRun;
   const latestItems = useMemo(() => batches.flatMap((candidateBatch) => candidateBatch.items.map((candidateItem) => ({ batch: candidateBatch, item: candidateItem }))).sort((a, b) => runTimestamp(b.item.trace) - runTimestamp(a.item.trace)), [batches]);
   const activeListIndex = latestItems.findIndex(({ item: candidateItem }) => linkedComparisonReport(candidateItem.trace)?.reportId === selectedCompareReportId);
   const revealed = useMemo(() => visibleTraceCallEvents(run, progress), [run, progress]);
@@ -238,12 +231,6 @@ function AppContent() {
     setView("compare");
   }
 
-  function toggleMockData() {
-    setPlaying(false);
-    setEvidenceOpen(false);
-    setIncludeMockData((current) => !current);
-  }
-
   async function importEvidence(file: File) {
     try {
       const parsed: unknown = JSON.parse(await file.text());
@@ -271,9 +258,6 @@ function AppContent() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark"><img src="/argus-mark.png" alt="" aria-hidden="true" /></span><span className="brand-copy"><strong>ARGUS</strong></span></div>
-        <div className="sidebar-action">
-          <UiButton variant={view === "compare" ? "primary" : "quiet"} type="button" onClick={openCompare}><GitCompareArrows size={16} aria-hidden="true" />Compare runs</UiButton>
-        </div>
         <section className="run-index" aria-labelledby="run-index-title">
           <div className="run-index-head"><strong id="run-index-title">Runs</strong><small>{latestItems.length}</small></div>
           <ol>
@@ -304,7 +288,6 @@ function AppContent() {
           <div className="topbar-context"><strong>{view === "compare" ? "Compare runs" : "Run detail"}</strong></div>
           <div className="topbar-actions">
             <input ref={inputRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void importEvidence(file); event.target.value = ""; }} />
-            <UiIconButton type="button" label={includeMockData ? "Exclude mock data" : "Include mock data"} className="mock-data-toggle" aria-pressed={includeMockData} data-state={includeMockData ? "included" : "excluded"} onClick={toggleMockData}><FlaskConical size={16} aria-hidden="true" /></UiIconButton>
             <UiButton type="button" onClick={() => inputRef.current?.click()}><Import size={15} aria-hidden="true" />Import evidence</UiButton>
           </div>
         </div>
@@ -319,7 +302,7 @@ function AppContent() {
             <AuditDetails batch={batch} item={item} loadedAt={loadedAtByRunId[run.runId] ?? run.importedAt} />
             <RunResultDetails run={run} />
           </div>
-        </> : <div className="view-stage run-detail-stage"><EmptyEvidenceState mockDataExcluded={!includeMockData} onImport={() => inputRef.current?.click()} /></div>) : <div className="view-stage compare-stage"><Suspense fallback={<div className="compare-loading">Loading Run space…</div>}><CompareRuns reports={portalReports} selectedId={selectedCompareReportId} onSelectedIdChange={setSelectedCompareReportId} /></Suspense></div>}
+        </> : <div className="view-stage run-detail-stage"><EmptyEvidenceState onImport={() => inputRef.current?.click()} /></div>) : <div className="view-stage compare-stage"><Suspense fallback={<div className="compare-loading">Loading Run space…</div>}><CompareRuns reports={portalReports} selectedId={selectedCompareReportId} onSelectedIdChange={setSelectedCompareReportId} /></Suspense></div>}
       </main>
     </div>
   );

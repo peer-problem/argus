@@ -8,3 +8,6 @@ coverage/
 *.tsbuildinfo
 .playwright-cli/
 output/playwright/
+.vercel/
+vercel.json
+.env*.local

@@ -1,53 +1,65 @@
-# ARGUS Trace
+# ARGUS
 
-ARGUS is a frontend-only dashboard for replaying and comparing normalized execution runs. It visualizes observed events, task dependencies, agent swimlanes, token and latency usage, failures, evidence checks, and final-answer provenance.
+### Scores tell us what happened. Traces tell us why.
 
-The repository does not define an execution roster, model route, system instruction, track instruction, experiment plan, or trial workflow. The dashboard derives agents, roles, models, tasks, waves, checks, and artifact identities from each imported run so those values can change between runs without a frontend change.
+An agent run is a temporal system of planning, delegation, model calls, parallel work, verification, and recovery. Yet it is usually remembered as a score, a token count, or a pass/fail state. Those summaries are easy to scan but difficult to learn from; raw logs preserve the evidence but hide the overall behavior.
 
-ARGUS Trace uses a local interface system with angular surfaces, compact controls, light/dark tokens, and accessible compound primitives.
+ARGUS is designed between those extremes. It keeps both levels of truth visible: **compare outcomes across runs, then trace any result back through its execution.**
 
-## Commands
+## Our methodology: overview → deviation → evidence
 
-```bash
-npm install
-npm run dev
-npm test
-npm run build
-npm run validate
-```
+ARGUS follows the natural sequence of an investigation:
 
-## Run input
+1. **Observe the population.** Understand the range of outcomes and the trade-offs across runs.
+2. **Locate the deviation.** Find the run, model, track, or moment that breaks the expected pattern.
+3. **Explain the cause.** Reconstruct the execution and inspect the evidence behind the anomaly.
 
-Use **Import run** in the dashboard to load one normalized run object or an array of run objects as JSON. A run must include a string `runId`, an `events` array, `totals`, and `compliance`. Other visualization fields follow the interfaces in [`apps/argus-trace/src/types.ts`](apps/argus-trace/src/types.ts).
+The two pages are not separate dashboards, but two resolutions of the same question. **Compare Runs** provides breadth; **Run Detail** provides causality. Selection connects them so the user can move from pattern to proof without rebuilding context.
 
-The bundled records under `apps/argus-trace/src/data/demo.ts` are synthetic rendering fixtures only.
+## See performance as a space, not a leaderboard
 
-## AI:GO fixture boundary
+![ARGUS Compare Runs view](assets/readme/compare-runs.png)
 
-`apps/argus-trace/src/data-sources/` isolates Squad observation data from the
-dashboard UI. `FixtureDataSource` reads an extracted local AI:GO workspace via
-the browser File API; it does not use HTTP or fabricate executions. The same
-`SquadObservabilityDataSource` interface is implemented by `TauriDataSource`
-for the native app's IPC commands.
+The **Compare Runs** view places every run inside a three-dimensional decision space: benchmark score, total tokens, and token efficiency. These axes were chosen because they describe the central tension in agent evaluation: the quality produced, the resources consumed, and the value obtained from those resources.
 
-The real AI:GO bundle contains prompts, outputs, errors, and local paths. Do
-not copy it into this repository. Tests use only a small, sanitized in-memory
-fixture. The folder-picker UI that connects the source to Trace is a subsequent
-implementation step.
+A run is not presented as simply “better” or “worse.” Position shows its balance of quality and resource use; distance and clustering reveal relationships before the user reads a row of data. The selected run becomes a stable visual anchor while the surrounding views explain its composition.
 
-When a local, read-only bundle is available, its adapter contract can be
-checked without placing it in Git:
+The surrounding charts preserve the context that a single ranking removes:
 
-```bash
-cd "/path/to/Argus"
-AIGO_FIXTURE_ROOT="/path/to/AIGO-visualization-real-logs" npm test -- fixture.contract.test.ts
-```
+- **Track accuracy** reveals where quality was gained or lost.
+- **Input and output tokens** expose each model’s share of the budget.
+- **Score, efficiency, and model calls over time** make regressions and outliers visible.
 
-## Repository map
+Aligned time axes and repeated colors let the user compare change without repeatedly decoding the interface. Bars show discrete composition and magnitude, the line shows efficiency as a continuous signal, and the 3D field is reserved for the relationship among three competing measures.
 
-- `apps/argus-trace/src/` — React dashboard, local types, derivations, and tests
-- `apps/argus-trace/src/data/demo.ts` — synthetic UI fixture data
-- `apps/argus-trace/src/data-sources/` — source-neutral AI:GO fixture and Tauri adapters
-- `tests/fixture.contract.test.ts` — optional local AI:GO bundle contract check
-- `apps/argus-trace/vite.config.ts` — Vite application configuration
-- `vitest.config.ts` — frontend test configuration
+This makes comparison actionable. Did a score improve because one track improved? Did efficiency rise because fewer calls were made? The overview identifies the run worth investigating; the linked detail explains what made it different.
+
+## Read execution in the coordinate system it happened in
+
+![ARGUS Run Detail view](assets/readme/run-detail.png)
+
+The **Run Detail** view reconstructs an execution on a shared wall-clock. Each row represents an actor and call; position shows when it occurred, length shows duration, color identifies the model, and connectors preserve task dependencies. Token use stays attached to the call that produced it.
+
+Time is the common coordinate because it reveals what tables cannot: sequence, concurrency, idle gaps, slow calls, and the handoff where behavior changed. A single scan distinguishes parallel work from events that merely appear adjacent in a log.
+
+Replay is not decorative animation. It restores the order in which information became available, turning a completed trace into a causal narrative. Event selection leads to the underlying record, while audit details expose limits, compliance, and provenance. The same view supports a fast behavioral read and a slower forensic one.
+
+## The visualization principles
+
+**Structure before detail.** The first view answers “where should I look?” before asking the user to inspect individual events.
+
+**Trade-offs over vanity metrics.** Quality, tokens, latency, and model calls remain visible together so improvement in one dimension cannot conceal regression in another.
+
+**One visual variable, one job.** Position communicates time or performance space, length communicates magnitude or duration, color identifies categories, and emphasis communicates selection.
+
+**Evidence over reconstruction theater.** Actors, models, tasks, checks, and provenance are derived from the imported run rather than imposed by a fixed roster. When a relationship is inferred rather than observed, ARGUS says so.
+
+**Progressive disclosure over indiscriminate density.** The first read stays visual. Events, limits, compliance, and provenance appear when the investigation requires them.
+
+**Consistency across scale.** The selected run remains the subject of its supporting charts and detailed trace, carrying context forward through every transition.
+
+---
+
+ARGUS does not make complex execution look simple. It makes that complexity legible—first as a pattern, then as a sequence, and finally as evidence.
+
+It is built around a simple belief: **an agent run should be inspectable as a system, not remembered as a score.**
