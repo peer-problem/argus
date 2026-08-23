@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Toast } from "@base-ui/react/toast";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { CheckCircle2, ChevronLeft, ChevronRight, FlaskConical, GitCompareArrows, Import, Radar, TriangleAlert } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, FlaskConical, GitCompareArrows, Import, TriangleAlert } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ArgusBatch, ArgusBatchItem, ArgusEvent, ArgusRun } from "./types.ts";
 import { DataArrivalFlow, RunSignals, TokenFlow } from "./components/AnalysisViews.tsx";
@@ -270,7 +270,7 @@ function AppContent() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark"><Radar size={19} aria-hidden="true" /></span><span className="brand-copy"><strong>ARGUS</strong></span></div>
+        <div className="brand"><span className="brand-mark"><img src="/argus-mark.png" alt="" aria-hidden="true" /></span><span className="brand-copy"><strong>ARGUS</strong></span></div>
         <div className="sidebar-action">
           <UiButton variant={view === "compare" ? "primary" : "quiet"} type="button" onClick={openCompare}><GitCompareArrows size={16} aria-hidden="true" />Compare runs</UiButton>
         </div>
