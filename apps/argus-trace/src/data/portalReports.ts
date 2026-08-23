@@ -19,8 +19,133 @@ function report(value: ReportInput): PortalBatchRunReport {
   };
 }
 
-/** Portal reports transcribed from the supplied run-detail captures. */
-export const capturedPortalReports: PortalBatchRunReport[] = [
+/** Portal reports transcribed from the supplied ranked-run captures. */
+export const addedPortalReports: PortalBatchRunReport[] = [
+  report({
+    reportId: "portal-limitedbeannoodle-hidden-1b3906fa-20260822-2354",
+    team: "LimitedBeanNoodle",
+    runName: "limitedbeannoodle-hidden-1b3906fa",
+    status: "completed",
+    score: 0.406,
+    scoredItems: 144,
+    totalItems: 147,
+    executionTimeMs: 774_000,
+    tokens: { input: 2_206_728, output: 560_932, total: 2_767_660 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T23:54:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/limitedbeannoodle-hidden-1b3906fa-20260822-2354",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 2_206_728, outputTokens: 560_932, requests: 566, totalTokens: 2_767_660 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.158, graded: 37, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.538, graded: 11, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.77, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
+  report({
+    reportId: "portal-noonchcoach-hidden-90825d8d-20260822-1918",
+    team: "Noonchcoach",
+    runName: "noonchcoach-hidden-90825d8d",
+    status: "completed",
+    score: 0.35,
+    scoredItems: 144,
+    totalItems: 147,
+    executionTimeMs: 524_000,
+    tokens: { input: 1_845_542, output: 423_809, total: 2_269_351 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T19:18:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/noonchcoach-hidden-90825d8d-20260822-1918",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 1_845_542, outputTokens: 423_809, requests: 539, totalTokens: 2_269_351 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.105, graded: 36, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.462, graded: 12, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.729, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
+  report({
+    reportId: "portal-couchpotato-hidden-c9f31618-20260822-1754",
+    team: "CouchPotato",
+    runName: "couchpotato-hidden-c9f31618",
+    status: "completed",
+    score: 0.285,
+    scoredItems: 146,
+    totalItems: 147,
+    executionTimeMs: 688_000,
+    tokens: { input: 2_294_626, output: 563_661, total: 2_858_287 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T17:54:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/couchpotato-hidden-c9f31618-20260822-1754",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 2_294_626, outputTokens: 563_661, requests: 802, totalTokens: 2_858_287 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.158, graded: 37, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.538, graded: 13, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.287, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
+  report({
+    reportId: "portal-demodaycare-hidden-bce040e5-20260822-1720",
+    team: "DemoDayCare",
+    runName: "demodaycare-hidden-bce040e5",
+    status: "completed",
+    score: 0.393,
+    scoredItems: 146,
+    totalItems: 147,
+    executionTimeMs: 683_000,
+    tokens: { input: 1_250_739, output: 514_142, total: 1_764_881 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T17:20:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/demodaycare-hidden-bce040e5-20260822-1720",
+    modelUsage: [
+      { model: "furiosa-ai/Qwen3-32B-FP8", inputTokens: 126_534, outputTokens: 293_098, requests: 112, totalTokens: 419_632 },
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 1_124_205, outputTokens: 221_044, requests: 147, totalTokens: 1_345_249 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0.211, graded: 38, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0.462, graded: 12, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.689, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  }),
+  report({
+    reportId: "portal-couchpotato-hidden-cf5ccb29-20260822-1718",
+    team: "CouchPotato",
+    runName: "couchpotato-hidden-cf5ccb29",
+    status: "completed",
+    score: 0.045,
+    scoredItems: 147,
+    totalItems: 147,
+    executionTimeMs: 556_000,
+    tokens: { input: 4_848_875, output: 519_605, total: 5_368_480 },
+    caps: { wallClockSeconds: null, tokenLimit: null },
+    postedAt: "2026-08-22T17:18:00.000Z",
+    receivedAt: null,
+    evidenceProtocol: "Portal run detail capture",
+    evidenceReference: "capture://portal/couchpotato-hidden-cf5ccb29-20260822-1718",
+    modelUsage: [
+      { model: "furiosa-ai/gpt-oss-120b", inputTokens: 4_848_875, outputTokens: 519_605, requests: 1_573, totalTokens: 5_368_480 }
+    ],
+    trackResults: [
+      { track: "coding", accuracy: 0, graded: 38, items: 38, excluded: 0, weight: 0.5 },
+      { track: "math", accuracy: 0, graded: 13, items: 13, excluded: 0, weight: 0.25 },
+      { track: "generic", accuracy: 0.179, graded: 96, items: 96, excluded: 0, weight: 0.25 }
+    ]
+  })
+];
+
+/** Existing reports paired with the six synthetic sidebar fixtures. */
+export const demoLinkedPortalReports: PortalBatchRunReport[] = [
   report({
     reportId: "portal-mishulta-hidden-8144245b-20260822-1549",
     team: "MISHULTA",
@@ -172,3 +297,5 @@ export const capturedPortalReports: PortalBatchRunReport[] = [
     ]
   })
 ];
+
+export const capturedPortalReports: PortalBatchRunReport[] = [...addedPortalReports, ...demoLinkedPortalReports];

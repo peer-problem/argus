@@ -181,7 +181,8 @@ button:focus-visible, input:focus-visible, [role="tab"]:focus-visible, [role="sl
 .app-shell { display: grid; min-height: 100vh; grid-template-columns: var(--ui-layout-sidebar) minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; z-index: 10; display: flex; height: 100vh; flex-direction: column; border-right: var(--ui-border-width) solid var(--ui-color-ink); background: var(--ui-color-canvas); }
 .brand { display: flex; height: 3rem; flex: none; align-items: center; gap: var(--ui-space-2); padding: 0 var(--ui-space-3); border-bottom: var(--ui-border-width) solid var(--ui-color-ink); }
-.brand-mark { display: grid; width: var(--ui-control-height); height: var(--ui-control-height); place-items: center; border: var(--ui-border-width) solid var(--ui-color-ink); color: var(--ui-color-accent); }
+.brand-mark { display: grid; width: 2.75rem; height: 2.75rem; flex: none; place-items: center; border: 0; background: transparent; color: var(--ui-color-accent); }
+.brand-mark img { display: block; width: 2.75rem; height: 2.75rem; object-fit: contain; }
 .brand-copy { display: flex; align-items: baseline; gap: var(--ui-space-2); }
 .brand-copy strong { font-family: var(--ui-font-display); font-size: var(--ui-text-sm); letter-spacing: .08em; }
 .brand-copy small { color: var(--ui-color-ink-muted); font-size: var(--ui-text-xs); }
@@ -498,7 +499,7 @@ main { min-width: 0; }
 .app-shell { background: var(--ui-color-app-background); }
 .sidebar { background: var(--ui-color-canvas); box-shadow: 1px 0 0 rgb(28 33 39 / 4%); }
 .brand { height: 3.5rem; padding: 0 var(--ui-space-4); border-bottom-color: var(--ui-color-line); }
-.brand-mark { border-color: var(--ui-color-line); background: var(--ui-color-signal-soft); color: var(--ui-color-accent); }
+.brand-mark { border: 0; background: transparent; color: var(--ui-color-accent); }
 .sidebar-action { padding: var(--ui-space-3); border-bottom: var(--ui-border-width) solid var(--ui-color-line); }
 .sidebar-action .ui-button { width: 100%; justify-content: flex-start; border-color: var(--ui-color-line); color: var(--ui-color-ink); }
 .sidebar-action .ui-button-primary { border-color: var(--ui-color-accent); background: var(--ui-color-accent); color: white; }

@@ -581,6 +581,7 @@ export function makeImportedBatch(runs: ArgusRun[], loadedAt: string): ArgusBatc
 
 export function dataArrivalsFor(item: ArgusBatchItem, loadedAt: string): DataArrival[] {
   const run = item.trace;
+  const bundled = run.source === "portal" && item.evidence.some((record) => record.protocol === "Portal run detail capture");
   const terminal = run.events.find((event) => event.kind === "run.completed" || event.kind === "run.failed" || event.kind === "run.capped");
   const native = terminal ? [{
     id: `${run.runId}-native`,
@@ -612,9 +613,9 @@ export function dataArrivalsFor(item: ArgusBatchItem, loadedAt: string): DataArr
   }));
   return [...native, ...evidence, ...links, {
     id: `${run.runId}-trace-load`,
-    source: run.source === "demo" ? "Bundled batch fixture" : "Imported evidence",
+    source: run.source === "demo" ? "Bundled batch fixture" : bundled ? "Bundled evidence projection" : "Imported evidence",
     receiver: "ARGUS Trace",
-    protocol: run.source === "demo" ? "Application module load" : "Browser File API",
+    protocol: run.source === "demo" || bundled ? "Application module load" : "Browser File API",
     recordedAt: loadedAt,
     data: "source-aware item projection loaded for local replay",
     reference: run.source === "demo" ? `demo://${run.runId}` : run.rawEvidenceRefs.join(" · ") || undefined
