@@ -1,12 +1,40 @@
-# ARGUS
+<div align="center">
+  <img src="apps/argus-trace/public/argus-mark.png" width="96" alt="ARGUS logo" />
+  <h1>ARGUS</h1>
+  <h3>Visual observability for agentic execution</h3>
+  <p><em>Compare the outcome. Trace the cause.</em></p>
+  <p>
+    <img src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React 19.1" />
+    <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+    <img src="https://img.shields.io/badge/Vite-7.1-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 7.1" />
+    <img src="https://img.shields.io/badge/ECharts-6.1-AA344D?style=flat-square&logo=apacheecharts&logoColor=white" alt="ECharts 6.1" />
+    <img src="https://img.shields.io/badge/Unovis-1.6-ABC929?style=flat-square" alt="Unovis 1.6" />
+    <img src="https://img.shields.io/badge/AI%3AGO-Integrated-6641E9?style=flat-square" alt="AI:GO integration" />
+  </p>
+</div>
 
-### Scores tell us what happened. Traces tell us why.
+<p align="center">
+  <img src="assets/readme/argus-overview.png" alt="ARGUS Compare Runs overview" />
+</p>
+
+<p align="center">
+  <a href="#our-methodology">Methodology</a> ·
+  <a href="#see-performance-as-a-space-not-a-leaderboard">Compare Runs</a> ·
+  <a href="#read-execution-in-the-coordinate-system-it-happened-in">Run Detail</a> ·
+  <a href="#the-visualization-principles">Principles</a>
+</p>
+
+---
+
+> **ARGUS** is a visual observability system for agentic execution. It maps quality, resource use, and efficiency across runs, then reconstructs any selected outcome as a causal, evidence-backed trace.
 
 An agent run is a temporal system of planning, delegation, model calls, parallel work, verification, and recovery. Yet it is usually remembered as a score, a token count, or a pass/fail state. Those summaries are easy to scan but difficult to learn from; raw logs preserve the evidence but hide the overall behavior.
 
 ARGUS is designed between those extremes. It keeps both levels of truth visible: **compare outcomes across runs, then trace any result back through its execution.**
 
-## Our methodology: overview → deviation → evidence
+## Our methodology
+
+### Overview → deviation → evidence
 
 ARGUS follows the natural sequence of an investigation:
 
