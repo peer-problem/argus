@@ -100,8 +100,8 @@ function portalRun(report: PortalBatchRunReport): ArgusRun {
 export const capturedPortalRuns: ArgusRun[] = addedPortalReports.map(portalRun);
 
 export const capturedPortalBatch: ArgusBatch = {
-  batchId: "batch-captured-portal-20260822-1718-1754",
-  name: "Captured ranked Portal runs · Aug 22 17:18–17:54 UTC",
+  batchId: "batch-captured-portal-20260822-1718-2354",
+  name: "Captured ranked Portal runs · Aug 22 17:18–23:54 UTC",
   source: "bundled",
   settings: { maxConcurrentTasks: null, maxTasks: null, taskTimeoutSeconds: null, directRequestByteLimit: null },
   items: capturedPortalRuns.map((run) => ({

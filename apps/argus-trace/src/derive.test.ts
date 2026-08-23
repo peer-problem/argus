@@ -147,11 +147,13 @@ describe("trace derivations", () => {
     expect(report.modelUsage.reduce((total, model) => total + model.totalTokens, 0)).toBe(report.tokens.total);
   });
 
-  it("preserves all nine captured Portal reports without inventing missing evidence", () => {
-    expect(addedPortalReports).toHaveLength(3);
+  it("preserves all eleven captured Portal reports without inventing missing evidence", () => {
+    expect(addedPortalReports).toHaveLength(5);
     expect(demoLinkedPortalReports).toHaveLength(6);
-    expect(capturedPortalReports).toHaveLength(9);
+    expect(capturedPortalReports).toHaveLength(11);
     expect(capturedPortalReports.map((report) => [report.team, report.runName, report.score])).toEqual([
+      ["LimitedBeanNoodle", "limitedbeannoodle-hidden-1b3906fa", 0.406],
+      ["Noonchcoach", "noonchcoach-hidden-90825d8d", 0.35],
       ["CouchPotato", "couchpotato-hidden-c9f31618", 0.285],
       ["DemoDayCare", "demodaycare-hidden-bce040e5", 0.393],
       ["CouchPotato", "couchpotato-hidden-cf5ccb29", 0.045],
@@ -175,9 +177,11 @@ describe("trace derivations", () => {
       expect(report.evidence).toMatchObject({ protocol: "Portal run detail capture", receivedAt: null });
     }
 
-    expect(addedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 802, totalTokens: 2_858_287 });
-    expect(addedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 112, totalTokens: 419_632 });
-    expect(addedPortalReports[2]!.modelUsage[0]).toMatchObject({ requests: 1_573, totalTokens: 5_368_480 });
+    expect(addedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 566, totalTokens: 2_767_660 });
+    expect(addedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 539, totalTokens: 2_269_351 });
+    expect(addedPortalReports[2]!.modelUsage[0]).toMatchObject({ requests: 802, totalTokens: 2_858_287 });
+    expect(addedPortalReports[3]!.modelUsage[0]).toMatchObject({ requests: 112, totalTokens: 419_632 });
+    expect(addedPortalReports[4]!.modelUsage[0]).toMatchObject({ requests: 1_573, totalTokens: 5_368_480 });
     expect(demoLinkedPortalReports[0]!.modelUsage[0]).toMatchObject({ requests: 327, totalTokens: 2_529_549 });
     expect(demoLinkedPortalReports[1]!.modelUsage[0]).toMatchObject({ requests: 26, totalTokens: 77_577 });
     expect(demoLinkedPortalReports[5]!.modelUsage[0]).toMatchObject({ requests: 1_464, totalTokens: 5_381_381 });
