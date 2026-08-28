@@ -1,8 +1,19 @@
 <div align="center">
   <img src="apps/argus-trace/public/argus-mark.png" width="96" alt="ARGUS logo" />
   <h1>ARGUS</h1>
-  <h3>Visual observability for agentic execution</h3>
-  <p><em>Compare the outcome. Trace the cause.</em></p>
+  <h3>Compare agent runs. See what made the difference.</h3>
+  <p>
+    <a href="https://gb.go.kr/Main/governor/page.do?BD_CODE=bbs_bodo&amp;B_LEVEL=0&amp;B_NUM=514627801&amp;B_STEP=514627800&amp;Start=0&amp;V_NUM=14781&amp;bdName=&amp;cmd=2&amp;dept_code=&amp;dept_name=&amp;key=4&amp;mnu_uid=6792&amp;p1=0&amp;p2=0&amp;tbbscode1=bbs_bodo&amp;word=">
+      <img   src="https://img.shields.io/badge/JunctionX%20Korea%202026-%F0%9F%8F%86%20Final%20Winner-6641E9?style=for-the-badge"
+ height="40" alt="JunctionX Korea 2026 Final Winner" />
+    </a>
+  </p>
+  <p><strong>Built by Demo Day Care</strong> for the Lablup × FuriosaAI track.</p>
+  <p>
+    <a href="https://www.lablup.com/blog/culture/2026-08-junctionx-hackathon-retrospective"><strong>Read Lablup's official JunctionX retrospective →</strong></a>
+    ·
+    <a href="https://www.lablup.com/ko/blog/culture/2026-08-junctionx-hackathon-retrospective">한국어</a>
+  </p>
   <p>
     <img src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React 19.1" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
@@ -18,19 +29,43 @@
 </p>
 
 <p align="center">
+  <a href="#quick-start">Quick Start</a> ·
   <a href="#our-methodology">Methodology</a> ·
-  <a href="#see-performance-as-a-space-not-a-leaderboard">Compare Runs</a> ·
+  <a href="#see-performance-as-a-space">Compare Runs</a> ·
   <a href="#read-execution-in-the-coordinate-system-it-happened-in">Run Detail</a> ·
-  <a href="#the-visualization-principles">Principles</a>
+  <a href="#the-visualization-principles">Principles</a> ·
+  <a href="#team-demo-day-care">Team</a> ·
+  <a href="#press-coverage">Press</a>
 </p>
 
 ---
 
-> **ARGUS** is a visual observability system for agentic execution. It maps quality, resource use, and efficiency across runs, then reconstructs any selected outcome as a causal, evidence-backed trace.
+Agent runs involve planning, delegation, model calls, parallel work, verification, and recovery. A score hides that process, while raw logs make it hard to see.
 
-An agent run is a temporal system of planning, delegation, model calls, parallel work, verification, and recovery. Yet it is usually remembered as a score, a token count, or a pass/fail state. Those summaries are easy to scan but difficult to learn from; raw logs preserve the evidence but hide the overall behavior.
+We built ARGUS to make key metrics across agent runs easy to understand at a glance.
 
-ARGUS is designed between those extremes. It keeps both levels of truth visible: **compare outcomes across runs, then trace any result back through its execution.**
+## Press coverage
+
+Selected coverage of JunctionX Korea 2026 and Demo Day Care's Final Winner award:
+
+- [시사저널 — \[경북 24시\] 경북도, ‘정션 엑스 코리아 해커톤 대회’ 개최…AI 기반 서비스 발굴](https://www.sisajournal.com/news/articleView.html?idxno=384804)
+- [이로운넷 — 경북도, AI와 공공데이터의 만남…현안 해결에 글로벌 혁신가들 머리 맞댔다](https://www.eroun.net/news/articleView.html?idxno=88374)
+- [대구신문 — 공공데이터로 본 지역문제, AI로 풀다](https://www.idaegu.co.kr/news/articleView.html?idxno=557588)
+
+**[Read all 18 press articles →](press.md)**
+
+## Quick Start
+
+**Requirements:** Node.js 20.19+ on the 20.x line, or Node.js 22.12+, with npm.
+
+```bash
+git clone https://github.com/peer-problem/argus.git
+cd argus
+npm ci
+npm run dev
+```
+
+Open [http://127.0.0.1:4173](http://127.0.0.1:4173) in your browser. To run the test suite and create a production build, use `npm run validate`.
 
 ## Our methodology
 
@@ -44,7 +79,7 @@ ARGUS follows the natural sequence of an investigation:
 
 The two pages are not separate dashboards, but two resolutions of the same question. **Compare Runs** provides breadth; **Run Detail** provides causality. Selection connects them so the user can move from pattern to proof without rebuilding context.
 
-## See performance as a space, not a leaderboard
+## See performance as a space
 
 ![ARGUS Compare Runs view](assets/readme/compare-runs.png)
 
@@ -70,7 +105,7 @@ The **Run Detail** view reconstructs an execution on a shared wall-clock. Each r
 
 Time is the common coordinate because it reveals what tables cannot: sequence, concurrency, idle gaps, slow calls, and the handoff where behavior changed. A single scan distinguishes parallel work from events that merely appear adjacent in a log.
 
-Replay is not decorative animation. It restores the order in which information became available, turning a completed trace into a causal narrative. Event selection leads to the underlying record, while audit details expose limits, compliance, and provenance. The same view supports a fast behavioral read and a slower forensic one.
+**Replay** restores the order in which information became available, turning a completed trace into a causal narrative. Event selection leads to the underlying record, while audit details expose limits, compliance, and provenance. The same view supports a fast behavioral read and a slower forensic one.
 
 ## The visualization principles
 
@@ -86,8 +121,19 @@ Replay is not decorative animation. It restores the order in which information b
 
 **Consistency across scale.** The selected run remains the subject of its supporting charts and detailed trace, carrying context forward through every transition.
 
----
+## Team Demo Day Care
 
-ARGUS does not make complex execution look simple. It makes that complexity legible—first as a pattern, then as a sequence, and finally as evidence.
+<p align="center">
+  <img src="https://cdn.lablup.com/IMG_20260827_175839_284068e13c.jpg" alt="Demo Day Care, JunctionX Korea 2026 Final Winner" />
+</p>
 
-It is built around a simple belief: **an agent run should be inspectable as a system, not remembered as a score.**
+| Name                | GitHub                                                     | Role                                                                                  |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Johnny SeokHyun Bae | [@jbaehova](https://github.com/jbaehova)                   | Agent orchestration, system architecture, and benchmark strategy                      |
+| Jaewon Lee          | [@leejaywon](https://github.com/leejaywon)                 | UI/UX, frontend development, benchmark analysis, and agent orchestration optimization |
+| Wonseok Yoo         | [@spark142857142857](https://github.com/spark142857142857) | AI:GO integration, candidate validation, and evidence compliance                      |
+| Rokyeon Kim         | [@rrrrok](https://github.com/rrrrok)                       | Data contracts, prompt composition, and token and context metrics                     |
+
+## MVP limitations
+
+ARGUS is a hackathon MVP. The web build visualizes bundled demo records or manually imported compatible ARGUS run JSON
