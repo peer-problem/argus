@@ -10,6 +10,11 @@
   </p>
   <p><strong>Built by Demo Day Care</strong> for the Lablup × FuriosaAI track.</p>
   <p>
+    <a href="https://www.lablup.com/blog/culture/2026-08-junctionx-hackathon-retrospective"><strong>Read Lablup's official JunctionX retrospective →</strong></a>
+    ·
+    <a href="https://www.lablup.com/ko/blog/culture/2026-08-junctionx-hackathon-retrospective">한국어</a>
+  </p>
+  <p>
     <img src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React 19.1" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
     <img src="https://img.shields.io/badge/Vite-7.1-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 7.1" />
@@ -117,6 +122,10 @@ Time is the common coordinate because it reveals what tables cannot: sequence, c
 **Consistency across scale.** The selected run remains the subject of its supporting charts and detailed trace, carrying context forward through every transition.
 
 ## Team Demo Day Care
+
+<p align="center">
+  <img src="https://cdn.lablup.com/IMG_20260827_175839_284068e13c.jpg" alt="Demo Day Care, JunctionX Korea 2026 Final Winner" />
+</p>
 
 | Name                | GitHub                                                     | Role                                                                                  |
 | ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
