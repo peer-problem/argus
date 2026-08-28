@@ -4,8 +4,8 @@
   <h3>Compare agent runs. See what made the difference.</h3>
   <p>
     <a href="https://gb.go.kr/Main/governor/page.do?BD_CODE=bbs_bodo&amp;B_LEVEL=0&amp;B_NUM=514627801&amp;B_STEP=514627800&amp;Start=0&amp;V_NUM=14781&amp;bdName=&amp;cmd=2&amp;dept_code=&amp;dept_name=&amp;key=4&amp;mnu_uid=6792&amp;p1=0&amp;p2=0&amp;tbbscode1=bbs_bodo&amp;word=">
-      <img   src="https://img.shields.io/badge/JunctionX%20Korea%202026-%F0%9F%8F%86%20Final%20Winner-6641E9?style=for-the-badge"
- height="40" alt="JunctionX Korea 2026 Final Winner" />
+      <img src="https://img.shields.io/badge/JunctionX%20Korea%202026-%F0%9F%8F%86%20Final%20Winner-6641E9?style=for-the-badge"
+        width="454" alt="JunctionX Korea 2026 Final Winner" />
     </a>
   </p>
   <p><strong>Built by Demo Day Care</strong> for the Lablup × FuriosaAI track.</p>
@@ -29,7 +29,6 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> ·
   <a href="#our-methodology">Methodology</a> ·
   <a href="#see-performance-as-a-space">Compare Runs</a> ·
   <a href="#read-execution-in-the-coordinate-system-it-happened-in">Run Detail</a> ·
@@ -53,19 +52,6 @@ Selected coverage of JunctionX Korea 2026 and Demo Day Care's Final Winner award
 - [대구신문 — 공공데이터로 본 지역문제, AI로 풀다](https://www.idaegu.co.kr/news/articleView.html?idxno=557588)
 
 **[Read all 18 press articles →](press.md)**
-
-## Quick Start
-
-**Requirements:** Node.js 20.19+ on the 20.x line, or Node.js 22.12+, with npm.
-
-```bash
-git clone https://github.com/peer-problem/argus.git
-cd argus
-npm ci
-npm run dev
-```
-
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173) in your browser. To run the test suite and create a production build, use `npm run validate`.
 
 ## Our methodology
 
