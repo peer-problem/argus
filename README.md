@@ -117,7 +117,7 @@ Time is the common coordinate because it reveals what tables cannot: sequence, c
 | ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Johnny SeokHyun Bae | [@jbaehova](https://github.com/jbaehova)                   | Agent orchestration, system architecture, and benchmark strategy                      |
 | Jaewon Lee          | [@leejaywon](https://github.com/leejaywon)                 | UI/UX, frontend development, benchmark analysis, and agent orchestration optimization |
-| Wonseok Yoo         | [@spark142857142857](https://github.com/spark142857142857) | AI:GO integration, candidate validation, and evidence compliance                      |
+| Wonseok Ryou        | [@spark142857142857](https://github.com/spark142857142857) | AI:GO integration, candidate validation, and evidence compliance                      |
 | Rokyeon Kim         | [@rrrrok](https://github.com/rrrrok)                       | Data contracts, prompt composition, and token and context metrics                     |
 
 ## MVP limitations
